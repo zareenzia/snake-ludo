@@ -51,6 +51,10 @@ function registerSocketHandlers(io, socket, roomManager) {
   // ── Create room ──
   socket.on('sl:create-room', (data, ack) => {
     const room = roomManager.createRoom(socket.id, data.name || 'Host');
+    // Apply preferred color if provided
+    if (data.color) {
+      roomManager.changeColor(room.code, socket.id, data.color);
+    }
     socket.join(room.code);
     currentRoomCode = room.code;
     if (ack) ack({ ok: true, code: room.code });
@@ -65,6 +69,7 @@ function registerSocketHandlers(io, socket, roomManager) {
       if (ack) ack({ ok: false, error: 'Room not found, full, or already started.' });
       return;
     }
+    if (data.color) roomManager.changeColor(code, socket.id, data.color);
     socket.join(code);
     currentRoomCode = code;
     if (ack) ack({ ok: true, code });
@@ -101,22 +106,40 @@ function registerSocketHandlers(io, socket, roomManager) {
   });
 
   // ── Add AI player (host only) ──
-  socket.on('sl:add-ai', () => {
+  socket.on('sl:add-ai', (data) => {
     if (!currentRoomCode) return;
-    const room = roomManager.addAI(currentRoomCode, socket.id);
+    const aiColor = (data && data.color) || undefined;
+    const room = roomManager.addAI(currentRoomCode, socket.id, aiColor);
+    if (room) broadcastRoomUpdate(room);
+  });
+
+  // ── Change own color ──
+  socket.on('sl:change-color', (data) => {
+    if (!currentRoomCode || !data || !data.color) return;
+    const room = roomManager.changeColor(currentRoomCode, socket.id, data.color);
+    if (room) broadcastRoomUpdate(room);
+  });
+
+  // ── Change AI color (host only) ──
+  socket.on('sl:change-ai-color', (data) => {
+    if (!currentRoomCode || !data || !data.aiId || !data.color) return;
+    const room = roomManager.changeAIColor(currentRoomCode, socket.id, data.aiId, data.color);
     if (room) broadcastRoomUpdate(room);
   });
 
   // ── Quick Play vs AI — create room, add AI, auto-start in one step ──
   socket.on('sl:quick-ai', (data, ack) => {
     const name = (data && data.name) || 'Player';
+    const playerColor = (data && data.color) || undefined;
+    const aiColor = (data && data.aiColor) || undefined;
     // Create room
     const room = roomManager.createRoom(socket.id, name);
     if (!room) { if (ack) ack({ ok: false, error: 'Failed to create room.' }); return; }
+    if (playerColor) roomManager.changeColor(room.code, socket.id, playerColor);
     currentRoomCode = room.code;
     socket.join(room.code);
     // Add AI opponent
-    roomManager.addAI(room.code, socket.id);
+    roomManager.addAI(room.code, socket.id, aiColor);
     // Set host ready
     roomManager.setReady(room.code, socket.id, true);
     // Start game immediately

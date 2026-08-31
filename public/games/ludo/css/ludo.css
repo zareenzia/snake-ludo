@@ -64,7 +64,15 @@ h1 {
 .color-dot {
   width: 20px; height: 20px; border-radius: 50%; display: inline-block;
   box-shadow: 0 0 8px currentColor;
+  transition: background 0.3s;
 }
+.color-select {
+  background: rgba(255,255,255,0.08); color: #eee;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  padding: 4px 8px; font-family: inherit; font-weight: 600;
+  cursor: pointer;
+}
+.color-select option:disabled { color: #555; }
 
 /* ========== BUTTONS ========== */
 .btn {

@@ -18,16 +18,43 @@
     const n = parseInt(playerCountEl.value, 10);
     playerTypesEl.innerHTML = '';
     for (let i = 0; i < n; i++) {
-      const color = COLORS[i];
+      const defaultColor = COLORS[i];
       const lbl = document.createElement('label');
       lbl.innerHTML =
-        '<span class="color-dot" style="background:' + COLOR_HEX[color] + '; color:' + COLOR_HEX[color] + '"></span>' +
-        '<strong>' + color.toUpperCase() + '</strong>' +
+        '<span class="color-dot" data-dot="' + i + '" style="background:' + COLOR_HEX[defaultColor] + '"></span>' +
+        '<select data-color="' + i + '" class="color-select">' +
+        COLORS.map(function(c) {
+          return '<option value="' + c + '"' + (c === defaultColor ? ' selected' : '') + ' style="color:' + COLOR_HEX[c] + '">' + c.toUpperCase() + '</option>';
+        }).join('') +
+        '</select>' +
         '<select data-player="' + i + '">' +
         '  <option value="human">Human</option>' +
         '  <option value="ai">AI</option>' +
         '</select>';
       playerTypesEl.appendChild(lbl);
+    }
+    // Update dots and disable taken colors
+    syncColorDropdowns();
+  }
+
+  function syncColorDropdowns() {
+    var colorSelects = playerTypesEl.querySelectorAll('[data-color]');
+    var chosen = [];
+    for (var i = 0; i < colorSelects.length; i++) {
+      chosen.push(colorSelects[i].value);
+    }
+    // Disable already-chosen options in other dropdowns
+    for (var i = 0; i < colorSelects.length; i++) {
+      var opts = colorSelects[i].querySelectorAll('option');
+      for (var j = 0; j < opts.length; j++) {
+        var val = opts[j].value;
+        opts[j].disabled = (val !== colorSelects[i].value && chosen.indexOf(val) !== -1);
+      }
+      // Update color dot
+      var dot = playerTypesEl.querySelector('[data-dot="' + i + '"]');
+      if (dot) dot.style.background = COLOR_HEX[colorSelects[i].value];
+      // Attach change listener
+      colorSelects[i].onchange = function() { syncColorDropdowns(); };
     }
   }
 
@@ -38,8 +65,10 @@
     var n = parseInt(playerCountEl.value, 10);
     var players = [];
     for (var i = 0; i < n; i++) {
-      var sel = playerTypesEl.querySelector('[data-player="' + i + '"]');
-      players.push(createPlayer(COLORS[i], sel.value));
+      var colorSel = playerTypesEl.querySelector('[data-color="' + i + '"]');
+      var typeSel = playerTypesEl.querySelector('[data-player="' + i + '"]');
+      var chosenColor = colorSel ? colorSel.value : COLORS[i];
+      players.push(createPlayer(chosenColor, typeSel.value));
     }
     startGame(players);
   });

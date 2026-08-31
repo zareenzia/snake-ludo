@@ -43,9 +43,56 @@
   var inputName = document.getElementById('input-name');
   var inputCode = document.getElementById('input-code');
 
+  /* ── Color palette shared across both games ── */
+  var COLOR_PALETTE = [
+    { hex: '#e94560', name: 'Red' },
+    { hex: '#0ead69', name: 'Green' },
+    { hex: '#f5c542', name: 'Yellow' },
+    { hex: '#4d9de0', name: 'Blue' },
+    { hex: '#9b59b6', name: 'Purple' },
+    { hex: '#e67e22', name: 'Orange' },
+    { hex: '#1abc9c', name: 'Teal' },
+    { hex: '#e84393', name: 'Pink' },
+  ];
+  var selectedColor = '#e94560';
+  var selectedAIColor = '#4d9de0';
+
+  function renderSwatches(containerId, selected, onSelect, excluded) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    for (var i = 0; i < COLOR_PALETTE.length; i++) {
+      var c = COLOR_PALETTE[i];
+      var swatch = document.createElement('div');
+      swatch.className = 'color-swatch';
+      swatch.style.background = c.hex;
+      swatch.title = c.name;
+      if (c.hex === selected) swatch.classList.add('selected');
+      if (excluded && excluded.indexOf(c.hex) !== -1) swatch.classList.add('taken');
+      (function(hex) {
+        swatch.addEventListener('click', function() { onSelect(hex); });
+      })(c.hex);
+      container.appendChild(swatch);
+    }
+  }
+
+  function refreshJoinSwatches() {
+    renderSwatches('join-color-picker', selectedColor, function(hex) {
+      if (hex === selectedAIColor) return;
+      selectedColor = hex;
+      refreshJoinSwatches();
+    }, [selectedAIColor]);
+    renderSwatches('join-ai-color-picker', selectedAIColor, function(hex) {
+      if (hex === selectedColor) return;
+      selectedAIColor = hex;
+      refreshJoinSwatches();
+    }, [selectedColor]);
+  }
+  refreshJoinSwatches();
+
   document.getElementById('btn-create').addEventListener('click', function () {
     var name = inputName.value.trim() || 'Host';
-    socket.emit('sl:create-room', { name: name }, function (res) {
+    socket.emit('sl:create-room', { name: name, color: selectedColor }, function (res) {
       if (res.ok) showScreen('lobby');
       else showToast(res.error || 'Failed to create room', 'snake');
     });
@@ -55,7 +102,7 @@
     var name = inputName.value.trim() || 'Player';
     var code = inputCode.value.trim().toUpperCase();
     if (!code) { showToast('Enter a room code', 'info'); return; }
-    socket.emit('sl:join-room', { name: name, code: code }, function (res) {
+    socket.emit('sl:join-room', { name: name, code: code, color: selectedColor }, function (res) {
       if (res.ok) showScreen('lobby');
       else showToast(res.error || 'Could not join', 'snake');
     });
@@ -64,7 +111,7 @@
   /* Quick Play vs AI — skip lobby, jump straight into a game */
   document.getElementById('btn-quick-ai').addEventListener('click', function () {
     var name = inputName.value.trim() || 'Player';
-    socket.emit('sl:quick-ai', { name: name }, function (res) {
+    socket.emit('sl:quick-ai', { name: name, color: selectedColor, aiColor: selectedAIColor }, function (res) {
       if (res && res.ok) {
         showScreen('game');
       } else {
@@ -83,6 +130,7 @@
 
   function renderLobby(room) {
     document.getElementById('lobby-code').textContent = room.code;
+    var amHost = room.hostId === mySocketId;
 
     var html = '';
     for (var i = 0; i < room.players.length; i++) {
@@ -92,6 +140,10 @@
       html += '<div class="lp-row">' +
         '<span class="lp-dot" style="background:' + p.color + ';color:' + p.color + '"></span>' +
         '<span class="lp-name">' + _esc(p.name) + (isMe ? ' (You)' : '') + (p.isAI ? ' 🤖' : '') + '</span>';
+      // Color change button (for self, or host can change AI colors)
+      if (isMe || (amHost && p.isAI)) {
+        html += '<span class="lp-color-btn" style="background:' + p.color + '" data-color-for="' + p.id + '" data-is-ai="' + (p.isAI ? '1' : '0') + '" title="Change color"></span>';
+      }
       if (isHost) html += '<span class="lp-badge lp-host">Host</span>';
       if (!p.connected && !p.isAI) html += '<span class="lp-badge lp-dc">DC</span>';
       else if (p.isAI) html += '<span class="lp-badge lp-ready">AI</span>';
@@ -101,8 +153,49 @@
     }
     document.getElementById('lobby-players').innerHTML = html;
 
+    // Attach color change button handlers
+    var takenColors = room.players.map(function(p) { return p.color; });
+    var colorBtns = document.querySelectorAll('.lp-color-btn');
+    for (var ci = 0; ci < colorBtns.length; ci++) {
+      (function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          // Toggle dropdown
+          var existing = btn.parentElement.querySelector('.lp-color-dropdown');
+          if (existing) { existing.remove(); return; }
+          // Close any open dropdowns
+          document.querySelectorAll('.lp-color-dropdown').forEach(function(d) { d.remove(); });
+          var dd = document.createElement('div');
+          dd.className = 'lp-color-dropdown';
+          var playerId = btn.getAttribute('data-color-for');
+          var isAI = btn.getAttribute('data-is-ai') === '1';
+          for (var pi = 0; pi < COLOR_PALETTE.length; pi++) {
+            var sc = document.createElement('div');
+            sc.className = 'color-swatch';
+            sc.style.background = COLOR_PALETTE[pi].hex;
+            sc.title = COLOR_PALETTE[pi].name;
+            if (takenColors.indexOf(COLOR_PALETTE[pi].hex) !== -1 && COLOR_PALETTE[pi].hex !== btn.style.backgroundColor) {
+              sc.classList.add('taken');
+            }
+            (function(hex) {
+              sc.addEventListener('click', function() {
+                if (isAI) {
+                  socket.emit('sl:change-ai-color', { aiId: playerId, color: hex });
+                } else {
+                  socket.emit('sl:change-color', { color: hex });
+                }
+                dd.remove();
+              });
+            })(COLOR_PALETTE[pi].hex);
+            dd.appendChild(sc);
+          }
+          btn.style.position = 'relative';
+          btn.appendChild(dd);
+        });
+      })(colorBtns[ci]);
+    }
+
     // Settings
-    var amHost = room.hostId === mySocketId;
     var sHtml = '<div class="setting-row"><label>' +
       '<input type="checkbox" id="set-exact" ' + (room.settings.exactFinish ? 'checked' : '') +
       (amHost ? '' : ' disabled') + '> Exact finish (must land on 100)</label></div>' +

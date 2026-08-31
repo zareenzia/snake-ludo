@@ -21,11 +21,19 @@
     </div>
     <div class="join-form glass-card">
       <input type="text" id="input-name" class="input" placeholder="Your name" maxlength="16" />
+      <div class="color-picker-section">
+        <label class="color-label">Your color:</label>
+        <div class="color-swatches" id="join-color-picker"></div>
+      </div>
       <button id="btn-create" class="btn btn-primary">Create Room</button>
       <div class="divider"><span>or</span></div>
       <input type="text" id="input-code" class="input" placeholder="Room code" maxlength="6" style="text-transform:uppercase" />
       <button id="btn-join" class="btn btn-secondary">Join Room</button>
       <div class="divider"><span>or</span></div>
+      <div class="color-picker-section">
+        <label class="color-label">AI color:</label>
+        <div class="color-swatches" id="join-ai-color-picker"></div>
+      </div>
       <button id="btn-quick-ai" class="btn btn-ai">⚡ Quick Play vs AI</button>
     </div>
   </div>

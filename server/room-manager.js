@@ -45,30 +45,88 @@ class RoomManager {
   }
 
   /** Add a player to a room's player list */
-  _addPlayer(room, socketId, name, isAI) {
-    const PLAYER_COLORS = ['#e94560', '#0ead69', '#f5c542', '#4d9de0'];
-    const idx = room.players.length;
+  _addPlayer(room, socketId, name, isAI, preferredColor) {
+    const ALL_COLORS = [
+      { hex: '#e94560', name: 'Red' },
+      { hex: '#0ead69', name: 'Green' },
+      { hex: '#f5c542', name: 'Yellow' },
+      { hex: '#4d9de0', name: 'Blue' },
+      { hex: '#9b59b6', name: 'Purple' },
+      { hex: '#e67e22', name: 'Orange' },
+      { hex: '#1abc9c', name: 'Teal' },
+      { hex: '#e84393', name: 'Pink' },
+    ];
+    const takenHexes = room.players.map(p => p.color);
+    let chosen = null;
+    if (preferredColor) {
+      chosen = ALL_COLORS.find(c => c.hex === preferredColor && !takenHexes.includes(c.hex));
+    }
+    if (!chosen) {
+      chosen = ALL_COLORS.find(c => !takenHexes.includes(c.hex)) || { hex: '#aaa', name: 'Gray' };
+    }
     room.players.push({
       id: socketId,
-      name: name || ('Player ' + (idx + 1)),
-      color: PLAYER_COLORS[idx] || '#aaa',
-      colorName: ['Red', 'Green', 'Yellow', 'Blue'][idx] || 'Gray',
-      ready: !!isAI,       // AI is always ready
+      name: name || ('Player ' + (room.players.length + 1)),
+      color: chosen.hex,
+      colorName: chosen.name,
+      ready: !!isAI,
       connected: true,
       position: 0,
       isAI: !!isAI,
     });
   }
 
+  /** Change a player's color in lobby */
+  changeColor(code, socketId, newColor) {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'lobby') return null;
+    const player = room.players.find(p => p.id === socketId);
+    if (!player) return null;
+    const takenHexes = room.players.filter(p => p.id !== socketId).map(p => p.color);
+    if (takenHexes.includes(newColor)) return null;
+    const ALL_COLORS = [
+      { hex: '#e94560', name: 'Red' }, { hex: '#0ead69', name: 'Green' },
+      { hex: '#f5c542', name: 'Yellow' }, { hex: '#4d9de0', name: 'Blue' },
+      { hex: '#9b59b6', name: 'Purple' }, { hex: '#e67e22', name: 'Orange' },
+      { hex: '#1abc9c', name: 'Teal' }, { hex: '#e84393', name: 'Pink' },
+    ];
+    const match = ALL_COLORS.find(c => c.hex === newColor);
+    if (!match) return null;
+    player.color = match.hex;
+    player.colorName = match.name;
+    return room;
+  }
+
+  /** Change an AI player's color (host only) */
+  changeAIColor(code, hostId, aiPlayerId, newColor) {
+    const room = this.rooms.get(code);
+    if (!room || room.hostId !== hostId || room.phase !== 'lobby') return null;
+    const aiPlayer = room.players.find(p => p.id === aiPlayerId && p.isAI);
+    if (!aiPlayer) return null;
+    const takenHexes = room.players.filter(p => p.id !== aiPlayerId).map(p => p.color);
+    if (takenHexes.includes(newColor)) return null;
+    const ALL_COLORS = [
+      { hex: '#e94560', name: 'Red' }, { hex: '#0ead69', name: 'Green' },
+      { hex: '#f5c542', name: 'Yellow' }, { hex: '#4d9de0', name: 'Blue' },
+      { hex: '#9b59b6', name: 'Purple' }, { hex: '#e67e22', name: 'Orange' },
+      { hex: '#1abc9c', name: 'Teal' }, { hex: '#e84393', name: 'Pink' },
+    ];
+    const match = ALL_COLORS.find(c => c.hex === newColor);
+    if (!match) return null;
+    aiPlayer.color = match.hex;
+    aiPlayer.colorName = match.name;
+    return room;
+  }
+
   /** Add an AI player to the room (host only) */
-  addAI(code, hostId) {
+  addAI(code, hostId, aiColor) {
     const room = this.rooms.get(code);
     if (!room || room.hostId !== hostId) return null;
     if (room.phase !== 'lobby') return null;
     if (room.players.length >= 4) return null;
     const aiId = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
     const aiNames = ['Bot Alpha', 'Bot Beta', 'Bot Gamma', 'Bot Delta'];
-    this._addPlayer(room, aiId, aiNames[room.players.length - 1] || 'Bot', true);
+    this._addPlayer(room, aiId, aiNames[room.players.length - 1] || 'Bot', true, aiColor);
     return room;
   }
 
