@@ -9,181 +9,240 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/hub.css" />
   <style>
-    /* ── SPA sliding viewport ── */
     html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; }
-    .spa-viewport {
-      width: 100%; height: 100vh; overflow: hidden; position: relative;
+
+    /* ── Animated background ── */
+    .bg-particles {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
     }
-    .spa-track {
-      display: flex; width: 200%; height: 100%;
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      transform: translateX(0);
+    .bg-particle {
+      position: absolute; font-size: 1.6rem; opacity: 0.12;
+      animation: floatUp linear infinite;
+      will-change: transform;
     }
-    .spa-track.slid { transform: translateX(-50%); }
-    .spa-panel {
-      width: 50%; height: 100%; flex-shrink: 0;
-      overflow-y: auto; overflow-x: hidden;
+    @keyframes floatUp {
+      0% { transform: translateY(110vh) rotate(0deg) scale(0.8); opacity: 0; }
+      10% { opacity: 0.15; }
+      90% { opacity: 0.12; }
+      100% { transform: translateY(-10vh) rotate(360deg) scale(1.2); opacity: 0; }
     }
-    #panel-hub {
+
+    /* ── Split layout ── */
+    .split-container {
+      display: flex; width: 100%; height: 100vh; position: relative; z-index: 1;
+    }
+
+    /* Left: Hub panel */
+    .hub-panel {
+      width: 100%; min-width: 0; height: 100%;
       display: flex; justify-content: center; align-items: center;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  min-width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto; overflow-x: hidden;
+      position: relative;
     }
-    #panel-game { position: relative; }
+    .split-container.split .hub-panel {
+      width: 38%; min-width: 320px;
+    }
+
+    /* Right: Game panel */
+    .game-panel {
+      width: 0; height: 100%; overflow: hidden; position: relative;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      border-left: 2px solid transparent;
+    }
+    .split-container.split .game-panel {
+      width: 62%;
+      border-left-color: rgba(255,255,255,0.06);
+    }
+
     #game-frame {
       width: 100%; height: 100%; border: none;
-      background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e);
+      background: linear-gradient(135deg, #0f0c29, #1a1a2e);
+      opacity: 0; transition: opacity 0.4s 0.3s;
     }
-    /* Back button overlay on game panel */
-    .spa-back-btn {
-      position: absolute; top: 14px; left: 14px; z-index: 50;
-      background: rgba(20,20,40,0.85); color: #ccd; border: 1px solid rgba(255,255,255,0.12);
-      padding: 6px 16px; border-radius: 10px; font-family: 'Nunito', sans-serif;
-      font-weight: 700; font-size: 0.85rem; cursor: pointer;
-      transition: all 0.2s; backdrop-filter: blur(8px);
+    .split-container.split #game-frame { opacity: 1; }
+
+    /* Back button */
+    .game-back-btn {
+      position: absolute; top: 12px; left: 12px; z-index: 50;
+      background: rgba(20,20,40,0.9); color: #ccd;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 7px 16px; border-radius: 10px; font-family: 'Nunito', sans-serif;
+      font-weight: 700; font-size: 0.82rem; cursor: pointer;
+      transition: all 0.2s; backdrop-filter: blur(10px);
+      opacity: 0; pointer-events: none;
+      transform: translateX(-20px);
+      transition: all 0.3s 0.4s;
     }
-    .spa-back-btn:hover { background: rgba(40,40,70,0.95); color: #fff; }
-    /* Loading overlay */
-    .spa-loading {
+    .split-container.split .game-back-btn {
+      opacity: 1; pointer-events: all; transform: translateX(0);
+    }
+    .game-back-btn:hover { background: rgba(50,50,80,0.95); color: #fff; }
+
+    /* Loading spinner */
+    .game-loading {
       position: absolute; inset: 0; z-index: 40;
       display: flex; justify-content: center; align-items: center;
-      background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e);
-      transition: opacity 0.3s; pointer-events: none;
+      background: linear-gradient(135deg, #0f0c29ee, #1a1a2eee);
+      transition: opacity 0.3s;
     }
-    .spa-loading.hidden { opacity: 0; }
-    .spa-loading-spinner {
-      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+    .game-loading.hidden { opacity: 0; pointer-events: none; }
+    .game-spinner {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(255,255,255,0.08);
       border-top-color: #0ead69; border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Divider glow line */
+    .split-container.split .game-panel::before {
+      content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 2px;
+      background: linear-gradient(180deg, transparent, #0ead6944, #e9456044, transparent);
+      z-index: 5;
+    }
+
+    /* Active card highlight */
+    .game-card.active {
+      border-color: var(--card-color) !important;
+      box-shadow: 0 0 20px var(--card-color, #0ead69)33 !important;
+      transform: scale(0.97) !important;
+    }
+
+    /* Hub shrink adjustments */
+    .split-container.split .hub-container { padding: 16px 12px; }
+    .split-container.split .hub-logo { font-size: 2.5rem; }
+    .split-container.split .hub-title { font-size: 1.6rem; }
+    .split-container.split .hub-subtitle { font-size: 0.8rem; }
+    .split-container.split .game-cards { gap: 12px; }
+    .split-container.split .game-card { padding: 20px 16px 16px; }
+    .split-container.split .card-icon { font-size: 2rem; }
+    .split-container.split .card-title { font-size: 1rem; }
+    .split-container.split .card-desc { font-size: 0.72rem; }
+
+    /* Mobile: stack vertically */
+    @media (max-width: 768px) {
+      .split-container { flex-direction: column; }
+      .split-container.split .hub-panel { width: 100%; min-width: 0; height: 45%; }
+      .split-container.split .game-panel { width: 100%; height: 55%; }
+      .game-panel { border-left: none; border-top: 2px solid transparent; }
+      .split-container.split .game-panel { border-top-color: rgba(255,255,255,0.06); }
+      .split-container.split .game-panel::before { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="spa-viewport">
-    <div class="spa-track" id="spa-track">
+  <!-- Animated background particles -->
+  <div class="bg-particles" id="bg-particles"></div>
 
-      <!-- ═══ Panel 1: Hub Menu ═══ -->
-      <div class="spa-panel" id="panel-hub">
-        <div class="hub-container">
-          <div class="hub-header">
-            <div class="hub-logo">🎲</div>
-            <h1 class="hub-title">Game Hub</h1>
-            <p class="hub-subtitle">Choose your game</p>
-            <div class="hub-profile-bar" id="hub-profile">
-              <span class="hub-level" id="hub-level">Lvl 1</span>
-              <span class="hub-coins">🪙 <strong id="hub-coins">0</strong></span>
-              <a href="/shop.html" class="hub-shop-btn">🛒 Shop</a>
-            </div>
+  <div class="split-container" id="split-container">
+    <!-- ═══ Left: Hub ═══ -->
+    <div class="hub-panel">
+      <div class="hub-container">
+        <div class="hub-header">
+          <div class="hub-logo">🎲</div>
+          <h1 class="hub-title">Game Hub</h1>
+          <p class="hub-subtitle">Choose your game</p>
+          <div class="hub-profile-bar" id="hub-profile">
+            <span class="hub-level" id="hub-level">Lvl 1</span>
+            <span class="hub-coins">🪙 <strong id="hub-coins">0</strong></span>
+            <a href="/shop.html" class="hub-shop-btn">🛒 Shop</a>
           </div>
-          <div class="game-cards" id="game-cards"></div>
         </div>
+        <div class="game-cards" id="game-cards"></div>
       </div>
+    </div>
 
-      <!-- ═══ Panel 2: Game (loaded via iframe) ═══ -->
-      <div class="spa-panel" id="panel-game">
-        <button class="spa-back-btn" id="spa-back">← Back to Menu</button>
-        <div class="spa-loading" id="spa-loading">
-          <div class="spa-loading-spinner"></div>
-        </div>
-        <iframe id="game-frame" src="about:blank"></iframe>
+    <!-- ═══ Right: Game ═══ -->
+    <div class="game-panel" id="game-panel">
+      <button class="game-back-btn" id="btn-back">← Close</button>
+      <div class="game-loading" id="game-loading">
+        <div class="game-spinner"></div>
       </div>
-
+      <iframe id="game-frame" src="about:blank"></iframe>
     </div>
   </div>
 
   <script src="js/profile.js"></script>
   <script>
+    /* ── Background particles ── */
+    (function () {
+      var emojis = ['🎲','🐍','🪜','⭐','🎯','👑','💎','🔥','🚀','🎮','🏆','🪙'];
+      var container = document.getElementById('bg-particles');
+      for (var i = 0; i < 20; i++) {
+        var p = document.createElement('div');
+        p.className = 'bg-particle';
+        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        p.style.left = Math.random() * 100 + '%';
+        p.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+        p.style.animationDuration = (12 + Math.random() * 18) + 's';
+        p.style.animationDelay = -(Math.random() * 20) + 's';
+        container.appendChild(p);
+      }
+    })();
+
+    /* ── Game registry ── */
     var GAMES = [
-      {
-        id: 'ludo',
-        title: 'Ludo',
-        desc: 'Classic Ludo + Snakes & Ladders hybrid. Local play, 2–4 players.',
-        icon: '🎯',
-        color: '#e94560',
-        url: '/games/ludo/ludo.html',
-        badge: 'Local',
-      },
-      {
-        id: 'snakes-ladders',
-        title: 'Snakes & Ladders',
-        desc: 'Real-time online multiplayer. Create or join a room with friends!',
-        icon: '🐍',
-        color: '#0ead69',
-        url: '/games/snakes-ladders/sl.html',
-        badge: 'Online',
-      },
+      { id: 'ludo', title: 'Ludo', desc: 'Classic Ludo + Snakes & Ladders hybrid. Local play, 2–4 players.', icon: '🎯', color: '#e94560', url: '/games/ludo/ludo.html', badge: 'Local' },
+      { id: 'snakes-ladders', title: 'Snakes & Ladders', desc: 'Real-time online multiplayer. Create or join a room with friends!', icon: '🐍', color: '#0ead69', url: '/games/snakes-ladders/sl.html', badge: 'Online' },
     ];
 
-    var track = document.getElementById('spa-track');
+    var splitEl = document.getElementById('split-container');
     var frame = document.getElementById('game-frame');
-    var loading = document.getElementById('spa-loading');
-    var container = document.getElementById('game-cards');
-    var currentGameUrl = null;
+    var loadingEl = document.getElementById('game-loading');
+    var cardsEl = document.getElementById('game-cards');
+    var activeCard = null;
 
-    // Preload game URLs in hidden iframes for instant switching
-    var preloaded = {};
-
-    // Render game cards
     GAMES.forEach(function (g) {
       var card = document.createElement('div');
       card.className = 'game-card';
+      card.setAttribute('data-game', g.id);
       card.style.setProperty('--card-color', g.color);
-      card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
       card.innerHTML =
         '<div class="card-badge" style="background:' + g.color + '">' + g.badge + '</div>' +
         '<div class="card-icon">' + g.icon + '</div>' +
         '<h2 class="card-title">' + g.title + '</h2>' +
         '<p class="card-desc">' + g.desc + '</p>' +
         '<div class="card-play">Play →</div>';
-
-      card.addEventListener('click', function () {
-        openGame(g.url);
-      });
-      container.appendChild(card);
+      card.addEventListener('click', function () { openGame(g, card); });
+      cardsEl.appendChild(card);
     });
 
-    function openGame(url) {
-      currentGameUrl = url;
-      loading.classList.remove('hidden');
+    function openGame(game, card) {
+      if (activeCard) activeCard.classList.remove('active');
+      activeCard = card;
+      card.classList.add('active');
 
-      // Load the game in iframe
-      frame.src = url;
+      loadingEl.classList.remove('hidden');
+      frame.src = game.url;
       frame.onload = function () {
-        loading.classList.add('hidden');
-        // Hide the "back to menu" link inside the iframe since we have our own
+        loadingEl.classList.add('hidden');
         try {
-          var iframeDoc = frame.contentDocument || frame.contentWindow.document;
-          var backLink = iframeDoc.getElementById('back-link');
-          if (backLink) backLink.style.display = 'none';
-        } catch (e) { /* cross-origin safety */ }
+          var doc = frame.contentDocument || frame.contentWindow.document;
+          var bl = doc.getElementById('back-link');
+          if (bl) bl.style.display = 'none';
+        } catch (e) {}
       };
 
-      // Slide to game panel
-      track.classList.add('slid');
+      splitEl.classList.add('split');
     }
 
-    function goBack() {
-      track.classList.remove('slid');
-      // After slide animation, clean up iframe
+    function closeGame() {
+      splitEl.classList.remove('split');
+      if (activeCard) { activeCard.classList.remove('active'); activeCard = null; }
       setTimeout(function () {
         frame.src = 'about:blank';
-        currentGameUrl = null;
-        loading.classList.remove('hidden');
-        // Refresh profile (coins may have changed)
+        loadingEl.classList.remove('hidden');
         refreshProfile();
-      }, 550);
+      }, 650);
     }
 
-    document.getElementById('spa-back').addEventListener('click', goBack);
-
-    // Handle keyboard (Escape to go back)
+    document.getElementById('btn-back').addEventListener('click', closeGame);
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && track.classList.contains('slid')) {
-        goBack();
-      }
+      if (e.key === 'Escape' && splitEl.classList.contains('split')) closeGame();
     });
 
-    // Profile display
     function refreshProfile() {
       var prof = GameProfile.get();
       document.getElementById('hub-coins').textContent = prof.coins;
