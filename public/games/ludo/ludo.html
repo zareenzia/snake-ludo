@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ludo — Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/ludo.css" />
+  <style>
+    .back-link {
+      position: fixed; top: 12px; left: 12px; z-index: 100;
+      font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.85rem;
+      color: #aab; text-decoration: none;
+      background: rgba(255,255,255,0.08); padding: 6px 16px; border-radius: 20px;
+      backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.1);
+      transition: background .2s, color .2s;
+    }
+    .back-link:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  </style>
+</head>
+<body>
+  <a href="/" class="back-link">← Menu</a>
+
+  <!-- Setup screen -->
+  <div id="setup-screen" class="screen">
+    <div class="logo-area">
+      <div class="logo-dice">🎲</div>
+      <h1>Snake-Ludo</h1>
+      <p class="subtitle">A hybrid of Ludo &amp; Snakes &amp; Ladders</p>
+    </div>
+    <div class="setup-form">
+      <label class="form-label">Number of Players
+        <select id="player-count">
+          <option value="2">2 Players</option>
+          <option value="3">3 Players</option>
+          <option value="4" selected>4 Players</option>
+        </select>
+      </label>
+      <div id="player-types"></div>
+      <button id="start-btn" class="btn btn-primary">
+        <span class="btn-icon">▶</span> Start Game
+      </button>
+    </div>
+  </div>
+
+  <!-- Game screen -->
+  <div id="game-screen" class="screen hidden">
+    <div id="turn-indicator"></div>
+    <div id="board-container">
+      <canvas id="board-canvas"></canvas>
+    </div>
+    <div id="controls">
+      <div id="dice-container">
+        <div id="dice-face">
+          <div class="dice-inner" id="dice-inner">
+            <span class="dice-dot-display" id="dice-dots"></span>
+          </div>
+        </div>
+        <button id="dice-btn" class="btn btn-dice">Roll Dice</button>
+      </div>
+    </div>
+    <div id="message-area"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Victory screen -->
+  <div id="victory-screen" class="screen hidden">
+    <div class="victory-content">
+      <div class="trophy">🏆</div>
+      <h1 id="winner-text"></h1>
+      <p class="victory-sub">All tokens reached home!</p>
+      <button id="restart-btn" class="btn btn-primary">
+        <span class="btn-icon">↻</span> Play Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Ludo JS (unchanged) -->
+  <script src="js/constants.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/dice.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

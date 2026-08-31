@@ -1,0 +1,68 @@
+/* ========== HUB MENU STYLES ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
+  color: #eee; min-height: 100vh;
+  display: flex; justify-content: center; align-items: center;
+}
+
+.hub-container { text-align: center; padding: 24px; max-width: 700px; width: 100%; }
+
+.hub-logo {
+  font-size: 4rem; margin-bottom: 4px;
+  animation: hub-float 3s ease-in-out infinite;
+}
+@keyframes hub-float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-10px) rotate(8deg); }
+}
+
+.hub-title {
+  font-size: 2.8rem; font-weight: 900;
+  background: linear-gradient(90deg, #e94560, #f5c542, #0ead69, #4d9de0);
+  background-clip: text; -webkit-background-clip: text; color: transparent;
+}
+.hub-subtitle { color: #889; font-weight: 700; margin-bottom: 36px; font-size: 1.1rem; }
+
+/* ── Game cards grid ── */
+.game-cards {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.game-card {
+  position: relative; text-decoration: none; color: #eee;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px; padding: 32px 24px 24px;
+  backdrop-filter: blur(8px);
+  transition: transform .2s, box-shadow .3s, border-color .3s;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.game-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 30px var(--card-color, #e94560)22;
+  border-color: var(--card-color, #e94560)55;
+}
+
+.card-badge {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+  padding: 3px 10px; border-radius: 20px; color: #fff;
+}
+.card-icon { font-size: 3.2rem; margin-bottom: 4px; }
+.card-title { font-size: 1.4rem; font-weight: 900; }
+.card-desc { font-size: 0.88rem; color: #aab; font-weight: 600; line-height: 1.4; }
+.card-play {
+  margin-top: 10px; font-weight: 800; font-size: 1rem;
+  color: var(--card-color, #e94560);
+  transition: letter-spacing .2s;
+}
+.game-card:hover .card-play { letter-spacing: 2px; }
+
+@media (max-width: 520px) {
+  .hub-title { font-size: 2rem; }
+  .game-cards { grid-template-columns: 1fr; }
+  .game-card { padding: 24px 18px 18px; }
+}

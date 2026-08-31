@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snakes & Ladders — Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/sl.css" />
+</head>
+<body>
+  <a href="/" class="back-link" id="back-link">← Menu</a>
+
+  <!-- ══════ JOIN / CREATE SCREEN ══════ -->
+  <div id="screen-join" class="screen">
+    <div class="logo-area">
+      <div class="logo-icon">🐍</div>
+      <h1>Snakes & Ladders</h1>
+      <p class="subtitle">Real-time online multiplayer</p>
+    </div>
+    <div class="join-form glass-card">
+      <input type="text" id="input-name" class="input" placeholder="Your name" maxlength="16" />
+      <button id="btn-create" class="btn btn-primary">Create Room</button>
+      <div class="divider"><span>or</span></div>
+      <input type="text" id="input-code" class="input" placeholder="Room code" maxlength="6" style="text-transform:uppercase" />
+      <button id="btn-join" class="btn btn-secondary">Join Room</button>
+    </div>
+  </div>
+
+  <!-- ══════ LOBBY SCREEN ══════ -->
+  <div id="screen-lobby" class="screen hidden">
+    <div class="glass-card lobby-card">
+      <h2>Room: <span id="lobby-code" class="room-code"></span></h2>
+      <div id="lobby-players" class="lobby-players"></div>
+      <div id="lobby-settings" class="lobby-settings"></div>
+      <div id="lobby-actions" class="lobby-actions"></div>
+      <div id="lobby-msg" class="lobby-msg"></div>
+    </div>
+  </div>
+
+  <!-- ══════ GAME SCREEN ══════ -->
+  <div id="screen-game" class="screen hidden">
+    <div id="sl-turn-indicator" class="turn-indicator"></div>
+    <div id="sl-board-wrap" class="board-wrap">
+      <canvas id="sl-canvas"></canvas>
+    </div>
+    <div id="sl-controls" class="controls">
+      <div id="sl-dice-container" class="dice-container">
+        <div id="sl-dice-face" class="dice-face">
+          <div class="dice-inner" id="sl-dice-inner"></div>
+        </div>
+        <button id="sl-dice-btn" class="btn btn-dice" disabled>Roll Dice</button>
+      </div>
+    </div>
+    <div id="sl-message" class="message-area"></div>
+  </div>
+
+  <!-- ══════ GAME OVER SCREEN ══════ -->
+  <div id="screen-gameover" class="screen hidden">
+    <div class="glass-card gameover-card">
+      <div class="trophy">🏆</div>
+      <h1 id="go-title"></h1>
+      <div id="go-rankings" class="rankings"></div>
+      <div class="go-actions">
+        <button id="btn-play-again" class="btn btn-primary">Play Again</button>
+        <a href="/" class="btn btn-secondary">Exit to Menu</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ TOASTS ══════ -->
+  <div id="toast-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/sl-board.js"></script>
+  <script src="js/sl-client.js"></script>
+</body>
+</html>

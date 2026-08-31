@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Hub — Snake-Ludo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/hub.css" />
+</head>
+<body>
+  <div class="hub-container">
+    <div class="hub-header">
+      <div class="hub-logo">🎲</div>
+      <h1 class="hub-title">Game Hub</h1>
+      <p class="hub-subtitle">Choose your game</p>
+    </div>
+
+    <div class="game-cards" id="game-cards">
+      <!-- Cards are rendered by JS so new modes can be added via config -->
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Game registry — add new modes here.
+     * Each entry gets a card on the hub menu.
+     */
+    const GAMES = [
+      {
+        id: 'ludo',
+        title: 'Ludo',
+        desc: 'Classic Ludo + Snakes & Ladders hybrid. Local play, 2–4 players.',
+        icon: '🎯',
+        color: '#e94560',
+        url: '/games/ludo/ludo.html',
+        badge: 'Local',
+      },
+      {
+        id: 'snakes-ladders',
+        title: 'Snakes & Ladders',
+        desc: 'Real-time online multiplayer. Create or join a room with friends!',
+        icon: '🐍',
+        color: '#0ead69',
+        url: '/games/snakes-ladders/sl.html',
+        badge: 'Online',
+      },
+    ];
+
+    const container = document.getElementById('game-cards');
+    GAMES.forEach(g => {
+      const card = document.createElement('a');
+      card.href = g.url;
+      card.className = 'game-card';
+      card.style.setProperty('--card-color', g.color);
+      card.innerHTML =
+        '<div class="card-badge" style="background:' + g.color + '">' + g.badge + '</div>' +
+        '<div class="card-icon">' + g.icon + '</div>' +
+        '<h2 class="card-title">' + g.title + '</h2>' +
+        '<p class="card-desc">' + g.desc + '</p>' +
+        '<div class="card-play">Play →</div>';
+      container.appendChild(card);
+    });
+  </script>
+</body>
+</html>

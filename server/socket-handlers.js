@@ -1,0 +1,244 @@
+/**
+ * socket-handlers.js
+ * Registers all Socket.io event handlers for the S&L multiplayer.
+ *
+ * Events from client → server:
+ *   sl:create-room, sl:join-room, sl:set-ready, sl:update-settings,
+ *   sl:kick-player, sl:start-game, sl:roll-dice, sl:leave-room
+ *
+ * Events from server → client:
+ *   sl:room-update, sl:game-started, sl:roll-result, sl:game-state,
+ *   sl:turn-skipped, sl:game-over, sl:error, sl:player-disconnected,
+ *   sl:player-reconnected
+ */
+const SLGameEngine = require('./sl-game-engine');
+
+/** Rate limit: track last roll time per socket */
+const lastRollTime = new Map();
+const ROLL_COOLDOWN_MS = 800;
+
+function registerSocketHandlers(io, socket, roomManager) {
+  // Track which room this socket belongs to
+  let currentRoomCode = null;
+
+  /** Utility: broadcast room state to all players in the room */
+  function broadcastRoomUpdate(room) {
+    const data = {
+      code: room.code,
+      hostId: room.hostId,
+      phase: room.phase,
+      settings: room.settings,
+      players: room.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        colorName: p.colorName,
+        ready: p.ready,
+        connected: p.connected,
+      })),
+    };
+    io.to(room.code).emit('sl:room-update', data);
+  }
+
+  /** Utility: broadcast game state */
+  function broadcastGameState(room) {
+    if (!room.gameState) return;
+    const state = SLGameEngine.getClientState(room.gameState, room.players);
+    io.to(room.code).emit('sl:game-state', state);
+  }
+
+  // ── Create room ──
+  socket.on('sl:create-room', (data, ack) => {
+    const room = roomManager.createRoom(socket.id, data.name || 'Host');
+    socket.join(room.code);
+    currentRoomCode = room.code;
+    if (ack) ack({ ok: true, code: room.code });
+    broadcastRoomUpdate(room);
+  });
+
+  // ── Join room ──
+  socket.on('sl:join-room', (data, ack) => {
+    const code = (data.code || '').toUpperCase().trim();
+    const room = roomManager.joinRoom(code, socket.id, data.name || 'Player');
+    if (!room) {
+      if (ack) ack({ ok: false, error: 'Room not found, full, or already started.' });
+      return;
+    }
+    socket.join(code);
+    currentRoomCode = code;
+    if (ack) ack({ ok: true, code });
+    broadcastRoomUpdate(room);
+  });
+
+  // ── Set ready status ──
+  socket.on('sl:set-ready', (data) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.setReady(currentRoomCode, socket.id, !!data.ready);
+    if (room) broadcastRoomUpdate(room);
+  });
+
+  // ── Update settings (host only) ──
+  socket.on('sl:update-settings', (data) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.updateSettings(currentRoomCode, socket.id, data.settings || {});
+    if (room) broadcastRoomUpdate(room);
+  });
+
+  // ── Kick player (host only) ──
+  socket.on('sl:kick-player', (data) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.kickPlayer(currentRoomCode, socket.id, data.targetId);
+    if (room) {
+      // Force kicked socket to leave
+      const kickedSocket = io.sockets.sockets.get(data.targetId);
+      if (kickedSocket) {
+        kickedSocket.leave(currentRoomCode);
+        kickedSocket.emit('sl:error', { message: 'You were kicked from the room.' });
+      }
+      broadcastRoomUpdate(room);
+    }
+  });
+
+  // ── Start game (host only, min 2 ready players) ──
+  socket.on('sl:start-game', (_, ack) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room || room.hostId !== socket.id) {
+      if (ack) ack({ ok: false, error: 'Only the host can start.' });
+      return;
+    }
+    if (room.players.length < 2) {
+      if (ack) ack({ ok: false, error: 'Need at least 2 players.' });
+      return;
+    }
+    const readyCount = room.players.filter(p => p.ready).length;
+    if (readyCount < room.players.length) {
+      if (ack) ack({ ok: false, error: 'All players must be ready.' });
+      return;
+    }
+
+    // Create game state
+    room.gameState = SLGameEngine.createGame(room.players, room.settings);
+    room.phase = 'playing';
+    if (ack) ack({ ok: true });
+
+    io.to(room.code).emit('sl:game-started');
+    broadcastGameState(room);
+  });
+
+  // ── Roll dice ──
+  socket.on('sl:roll-dice', (_, ack) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room || !room.gameState || room.gameState.phase !== 'playing') return;
+
+    // Check it's this player's turn
+    const gs = room.gameState;
+    const currentIdx = SLGameEngine.currentPlayerIndex(gs);
+    const playerIdx = room.players.findIndex(p => p.id === socket.id);
+    if (playerIdx !== currentIdx) {
+      if (ack) ack({ ok: false, error: 'Not your turn.' });
+      return;
+    }
+
+    // Rate limit (double-click protection)
+    const now = Date.now();
+    const lastTime = lastRollTime.get(socket.id) || 0;
+    if (now - lastTime < ROLL_COOLDOWN_MS) {
+      if (ack) ack({ ok: false, error: 'Too fast, wait a moment.' });
+      return;
+    }
+    lastRollTime.set(socket.id, now);
+
+    // Process the turn
+    const result = SLGameEngine.processTurn(gs);
+    if (!result) return;
+
+    if (ack) ack({ ok: true });
+
+    // Broadcast roll result to all clients
+    io.to(room.code).emit('sl:roll-result', result);
+
+    // Broadcast updated state
+    broadcastGameState(room);
+
+    // Check game over
+    if (gs.phase === 'ended') {
+      io.to(room.code).emit('sl:game-over', {
+        rankings: gs.finished.map(idx => ({
+          name: room.players[idx].name,
+          color: room.players[idx].color,
+          colorName: room.players[idx].colorName,
+        })),
+      });
+      room.phase = 'ended';
+    }
+  });
+
+  // ── Leave room ──
+  socket.on('sl:leave-room', () => {
+    if (!currentRoomCode) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (room) {
+      socket.leave(currentRoomCode);
+      room.players = room.players.filter(p => p.id !== socket.id);
+      if (room.players.length === 0) {
+        roomManager.deleteRoom(currentRoomCode);
+      } else {
+        if (room.hostId === socket.id) {
+          room.hostId = room.players[0].id;
+        }
+        broadcastRoomUpdate(room);
+      }
+    }
+    currentRoomCode = null;
+  });
+
+  // ── Play again (host resets game in same room) ──
+  socket.on('sl:play-again', () => {
+    if (!currentRoomCode) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room || room.hostId !== socket.id) return;
+    room.phase = 'lobby';
+    room.gameState = null;
+    room.players.forEach(p => { p.ready = false; p.position = 0; });
+    broadcastRoomUpdate(room);
+  });
+
+  // ── Disconnect ──
+  socket.on('disconnect', () => {
+    lastRollTime.delete(socket.id);
+    const result = roomManager.disconnectPlayer(socket.id);
+    if (result) {
+      const { room, player } = result;
+      io.to(room.code).emit('sl:player-disconnected', {
+        name: player.name,
+        color: player.color,
+      });
+      if (room.phase === 'playing') {
+        // If it was their turn, auto-skip after a short delay
+        const gs = room.gameState;
+        if (gs && gs.phase === 'playing') {
+          const currentIdx = SLGameEngine.currentPlayerIndex(gs);
+          const playerIdx = room.players.findIndex(p => p.id === socket.id);
+          if (playerIdx === currentIdx) {
+            setTimeout(() => {
+              // Re-check they're still disconnected
+              const p = room.players.find(pp => pp.id === socket.id);
+              if (p && !p.connected && gs.phase === 'playing') {
+                const skip = SLGameEngine.skipTurn(gs);
+                if (skip) {
+                  io.to(room.code).emit('sl:turn-skipped', skip);
+                  broadcastGameState(room);
+                }
+              }
+            }, 5000);
+          }
+        }
+      }
+      broadcastRoomUpdate(room);
+    }
+  });
+}
+
+module.exports = { registerSocketHandlers };
