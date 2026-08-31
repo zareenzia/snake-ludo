@@ -1,35 +1,57 @@
 /**
  * dice.js
  * ─────────────────────────────────────────────
- * Dice rolling logic with a simple animation.
+ * 3D-style dice with dot patterns and tumble animation.
  * Exports Dice.roll() → Promise<number> (1-6)
  */
 
 const Dice = (() => {
-  const resultEl = () => document.getElementById('dice-result');
-  const faces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  const faceEl = () => document.getElementById('dice-face');
+  const innerEl = () => document.getElementById('dice-inner');
+
+  /* Dot layout for each face (3×3 grid, 1=dot, 0=empty) */
+  const DOT_LAYOUTS = {
+    1: [0,0,0, 0,1,0, 0,0,0],
+    2: [0,0,1, 0,0,0, 1,0,0],
+    3: [0,0,1, 0,1,0, 1,0,0],
+    4: [1,0,1, 0,0,0, 1,0,1],
+    5: [1,0,1, 0,1,0, 1,0,1],
+    6: [1,0,1, 1,0,1, 1,0,1],
+  };
+
+  function _renderDots(value) {
+    const el = innerEl();
+    const layout = DOT_LAYOUTS[value];
+    el.innerHTML = layout.map(v =>
+      v ? '<span class="dot"></span>' : '<span class="dot hidden"></span>'
+    ).join('');
+  }
+
+  // Show initial face
+  setTimeout(() => _renderDots(1), 0);
 
   /**
-   * Animate dice and resolve with final value (1-6).
+   * Animate dice tumble then resolve with final value (1-6).
    */
   function roll() {
     return new Promise(resolve => {
-      const el = resultEl();
+      const face = faceEl();
+      face.classList.remove('landed');
+      face.classList.add('rolling');
+
       let ticks = 0;
       const interval = setInterval(() => {
-        const rand = Math.floor(Math.random() * 6);
-        el.textContent = faces[rand];
-        el.style.transform = `rotate(${rand * 60}deg) scale(1.4)`;
+        _renderDots(Math.floor(Math.random() * 6) + 1);
         ticks++;
-        if (ticks >= 10) {
+        if (ticks >= 12) {
           clearInterval(interval);
           const value = Math.floor(Math.random() * 6) + 1;
-          el.textContent = faces[value - 1];
-          el.style.transform = 'rotate(0) scale(1.6)';
-          setTimeout(() => { el.style.transform = 'scale(1)'; }, 200);
+          _renderDots(value);
+          face.classList.remove('rolling');
+          face.classList.add('landed');
           resolve(value);
         }
-      }, 80);
+      }, 70);
     });
   }
 

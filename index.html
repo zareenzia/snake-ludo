@@ -4,46 +4,66 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snake-Ludo Board Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <!-- Setup screen -->
   <div id="setup-screen" class="screen">
-    <h1>🎲 Snake-Ludo</h1>
-    <p>A hybrid of Ludo &amp; Snakes &amp; Ladders</p>
+    <div class="logo-area">
+      <div class="logo-dice">🎲</div>
+      <h1>Snake-Ludo</h1>
+      <p class="subtitle">A hybrid of Ludo &amp; Snakes &amp; Ladders</p>
+    </div>
     <div class="setup-form">
-      <label>Number of Players:
+      <label class="form-label">Number of Players
         <select id="player-count">
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4" selected>4</option>
+          <option value="2">2 Players</option>
+          <option value="3">3 Players</option>
+          <option value="4" selected>4 Players</option>
         </select>
       </label>
       <div id="player-types"></div>
-      <button id="start-btn" class="btn">Start Game</button>
+      <button id="start-btn" class="btn btn-primary">
+        <span class="btn-icon">▶</span> Start Game
+      </button>
     </div>
   </div>
 
   <!-- Game screen -->
   <div id="game-screen" class="screen hidden">
-    <div id="info-bar">
-      <div id="turn-indicator"></div>
-      <div id="dice-result"></div>
-    </div>
+    <div id="turn-indicator"></div>
     <div id="board-container">
       <canvas id="board-canvas"></canvas>
-      <!-- Token overlays rendered via JS -->
     </div>
     <div id="controls">
-      <button id="dice-btn" class="btn dice-btn">🎲 Roll Dice</button>
+      <div id="dice-container">
+        <div id="dice-face">
+          <div class="dice-inner" id="dice-inner">
+            <span class="dice-dot-display" id="dice-dots"></span>
+          </div>
+        </div>
+        <button id="dice-btn" class="btn btn-dice">Roll Dice</button>
+      </div>
     </div>
     <div id="message-area"></div>
   </div>
 
+  <!-- Toast container for event popups -->
+  <div id="toast-container"></div>
+
   <!-- Victory screen -->
   <div id="victory-screen" class="screen hidden">
-    <h1 id="winner-text"></h1>
-    <button id="restart-btn" class="btn">Play Again</button>
+    <div class="victory-content">
+      <div class="trophy">🏆</div>
+      <h1 id="winner-text"></h1>
+      <p class="victory-sub">All tokens reached home!</p>
+      <button id="restart-btn" class="btn btn-primary">
+        <span class="btn-icon">↻</span> Play Again
+      </button>
+    </div>
   </div>
 
   <!-- JS modules -->
