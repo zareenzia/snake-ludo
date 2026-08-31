@@ -107,6 +107,29 @@ function registerSocketHandlers(io, socket, roomManager) {
     if (room) broadcastRoomUpdate(room);
   });
 
+  // ── Quick Play vs AI — create room, add AI, auto-start in one step ──
+  socket.on('sl:quick-ai', (data, ack) => {
+    const name = (data && data.name) || 'Player';
+    // Create room
+    const room = roomManager.createRoom(socket.id, name);
+    if (!room) { if (ack) ack({ ok: false, error: 'Failed to create room.' }); return; }
+    currentRoomCode = room.code;
+    socket.join(room.code);
+    // Add AI opponent
+    roomManager.addAI(room.code, socket.id);
+    // Set host ready
+    roomManager.setReady(room.code, socket.id, true);
+    // Start game immediately
+    room.gameState = SLGameEngine.createGame(room.players, room.settings);
+    room.phase = 'playing';
+    broadcastRoomUpdate(room);
+    io.to(room.code).emit('sl:game-started');
+    broadcastGameState(room);
+    if (ack) ack({ ok: true, code: room.code });
+    // If AI goes first, auto-roll
+    scheduleAIRoll(room);
+  });
+
   // ── Start game (host only, min 2 ready players) ──
   socket.on('sl:start-game', (_, ack) => {
     if (!currentRoomCode) return;

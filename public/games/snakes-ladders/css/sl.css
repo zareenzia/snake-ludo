@@ -67,6 +67,14 @@ h1 {
   border: 1px solid rgba(255,255,255,0.12);
 }
 
+.btn-ai {
+  background: linear-gradient(135deg, #f5c542, #e6a800);
+  color: #1a1a2e; font-weight: 700;
+  border: none; font-size: 1.05rem;
+  box-shadow: 0 4px 16px rgba(245,197,66,0.3);
+}
+.btn-ai:hover { background: linear-gradient(135deg, #ffe066, #f5c542); transform: scale(1.04); }
+
 .btn-dice {
   background: linear-gradient(135deg, #0ead69, #0a8a50);
   color: #fff; box-shadow: 0 3px 14px rgba(14,173,105,0.3);

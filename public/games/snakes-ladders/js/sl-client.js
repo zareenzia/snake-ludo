@@ -61,6 +61,18 @@
     });
   });
 
+  /* Quick Play vs AI — skip lobby, jump straight into a game */
+  document.getElementById('btn-quick-ai').addEventListener('click', function () {
+    var name = inputName.value.trim() || 'Player';
+    socket.emit('sl:quick-ai', { name: name }, function (res) {
+      if (res && res.ok) {
+        showScreen('game');
+      } else {
+        showToast((res && res.error) || 'Failed to start', 'snake');
+      }
+    });
+  });
+
   /* ══════════════════════════════════════
      LOBBY (with AI button)
      ══════════════════════════════════════ */
