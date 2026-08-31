@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake-Ludo Board Game</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Setup screen -->
+  <div id="setup-screen" class="screen">
+    <h1>🎲 Snake-Ludo</h1>
+    <p>A hybrid of Ludo &amp; Snakes &amp; Ladders</p>
+    <div class="setup-form">
+      <label>Number of Players:
+        <select id="player-count">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+        </select>
+      </label>
+      <div id="player-types"></div>
+      <button id="start-btn" class="btn">Start Game</button>
+    </div>
+  </div>
+
+  <!-- Game screen -->
+  <div id="game-screen" class="screen hidden">
+    <div id="info-bar">
+      <div id="turn-indicator"></div>
+      <div id="dice-result"></div>
+    </div>
+    <div id="board-container">
+      <canvas id="board-canvas"></canvas>
+      <!-- Token overlays rendered via JS -->
+    </div>
+    <div id="controls">
+      <button id="dice-btn" class="btn dice-btn">🎲 Roll Dice</button>
+    </div>
+    <div id="message-area"></div>
+  </div>
+
+  <!-- Victory screen -->
+  <div id="victory-screen" class="screen hidden">
+    <h1 id="winner-text"></h1>
+    <button id="restart-btn" class="btn">Play Again</button>
+  </div>
+
+  <!-- JS modules -->
+  <script src="js/constants.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/dice.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
