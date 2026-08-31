@@ -39,21 +39,37 @@
     </div>
   </div>
 
-  <!-- ══════ GAME SCREEN ══════ -->
+  <!-- ══════ GAME SCREEN (restructured layout) ══════ -->
   <div id="screen-game" class="screen hidden">
-    <div id="sl-turn-indicator" class="turn-indicator"></div>
-    <div id="sl-board-wrap" class="board-wrap">
-      <canvas id="sl-canvas"></canvas>
-    </div>
-    <div id="sl-controls" class="controls">
-      <div id="sl-dice-container" class="dice-container">
-        <div id="sl-dice-face" class="dice-face">
-          <div class="dice-inner" id="sl-dice-inner"></div>
-        </div>
-        <button id="sl-dice-btn" class="btn btn-dice" disabled>Roll Dice</button>
+    <div class="game-layout">
+
+      <!-- Left: Move log -->
+      <div class="move-log-panel">
+        <div class="log-header">📜 Move Log</div>
+        <div class="log-entries" id="move-log"></div>
       </div>
+
+      <!-- Center: Board + controls -->
+      <div class="game-center">
+        <div class="game-top-bar">
+          <div id="sl-turn-indicator" class="turn-indicator"></div>
+          <div class="game-actions">
+            <button id="btn-restart-game" class="btn btn-sm btn-secondary" title="Restart">↻ Restart</button>
+            <button id="btn-exit-game" class="btn btn-sm btn-danger" title="Exit">✕ Exit</button>
+          </div>
+        </div>
+
+        <div id="sl-board-wrap" class="board-wrap">
+          <canvas id="sl-canvas"></canvas>
+        </div>
+
+        <!-- Per-player dice row -->
+        <div id="player-dice-row" class="player-dice-row"></div>
+
+        <div id="sl-message" class="message-area"></div>
+      </div>
+
     </div>
-    <div id="sl-message" class="message-area"></div>
   </div>
 
   <!-- ══════ GAME OVER SCREEN ══════ -->

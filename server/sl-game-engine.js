@@ -202,6 +202,7 @@ class SLGameEngine {
         colorName: p.colorName,
         connected: p.connected,
         position: gs.positions[i],
+        isAI: !!p.isAI,
       })),
     };
   }

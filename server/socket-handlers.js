@@ -35,6 +35,7 @@ function registerSocketHandlers(io, socket, roomManager) {
         colorName: p.colorName,
         ready: p.ready,
         connected: p.connected,
+        isAI: !!p.isAI,
       })),
     };
     io.to(room.code).emit('sl:room-update', data);
@@ -99,12 +100,19 @@ function registerSocketHandlers(io, socket, roomManager) {
     }
   });
 
+  // ── Add AI player (host only) ──
+  socket.on('sl:add-ai', () => {
+    if (!currentRoomCode) return;
+    const room = roomManager.addAI(currentRoomCode, socket.id);
+    if (room) broadcastRoomUpdate(room);
+  });
+
   // ── Start game (host only, min 2 ready players) ──
   socket.on('sl:start-game', (_, ack) => {
     if (!currentRoomCode) return;
     const room = roomManager.getRoom(currentRoomCode);
-    if (!room || room.hostId !== socket.id) {
-      if (ack) ack({ ok: false, error: 'Only the host can start.' });
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') {
+      if (ack) ack({ ok: false, error: 'Only the host can start from the lobby.' });
       return;
     }
     if (room.players.length < 2) {
@@ -124,7 +132,46 @@ function registerSocketHandlers(io, socket, roomManager) {
 
     io.to(room.code).emit('sl:game-started');
     broadcastGameState(room);
+
+    // If first player is AI, auto-roll
+    scheduleAIRoll(room);
   });
+
+  /** Schedule an AI roll if the current player is AI */
+  function scheduleAIRoll(room) {
+    if (!room || !room.gameState || room.gameState.phase !== 'playing') return;
+    const gs = room.gameState;
+    const currentIdx = SLGameEngine.currentPlayerIndex(gs);
+    const player = room.players[currentIdx];
+    if (!player || !player.isAI) return;
+
+    // Delay for visual effect (let clients animate previous move)
+    setTimeout(() => {
+      if (!room.gameState || room.gameState.phase !== 'playing') return;
+      const checkIdx = SLGameEngine.currentPlayerIndex(room.gameState);
+      if (checkIdx !== currentIdx) return; // turn already changed
+
+      const result = SLGameEngine.processTurn(room.gameState);
+      if (!result) return;
+
+      io.to(room.code).emit('sl:roll-result', result);
+      broadcastGameState(room);
+
+      if (room.gameState.phase === 'ended') {
+        io.to(room.code).emit('sl:game-over', {
+          rankings: room.gameState.finished.map(idx => ({
+            name: room.players[idx].name,
+            color: room.players[idx].color,
+            colorName: room.players[idx].colorName,
+          })),
+        });
+        room.phase = 'ended';
+      } else {
+        // Chain: if the next player is also AI (or same AI got extra turn)
+        scheduleAIRoll(room);
+      }
+    }, 1500);
+  }
 
   // ── Roll dice ──
   socket.on('sl:roll-dice', (_, ack) => {
@@ -172,6 +219,9 @@ function registerSocketHandlers(io, socket, roomManager) {
         })),
       });
       room.phase = 'ended';
+    } else {
+      // If next player is AI, schedule auto-roll
+      scheduleAIRoll(room);
     }
   });
 

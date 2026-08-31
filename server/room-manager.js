@@ -45,7 +45,7 @@ class RoomManager {
   }
 
   /** Add a player to a room's player list */
-  _addPlayer(room, socketId, name) {
+  _addPlayer(room, socketId, name, isAI) {
     const PLAYER_COLORS = ['#e94560', '#0ead69', '#f5c542', '#4d9de0'];
     const idx = room.players.length;
     room.players.push({
@@ -53,10 +53,23 @@ class RoomManager {
       name: name || ('Player ' + (idx + 1)),
       color: PLAYER_COLORS[idx] || '#aaa',
       colorName: ['Red', 'Green', 'Yellow', 'Blue'][idx] || 'Gray',
-      ready: false,
+      ready: !!isAI,       // AI is always ready
       connected: true,
-      position: 0, // 0 = off-board
+      position: 0,
+      isAI: !!isAI,
     });
+  }
+
+  /** Add an AI player to the room (host only) */
+  addAI(code, hostId) {
+    const room = this.rooms.get(code);
+    if (!room || room.hostId !== hostId) return null;
+    if (room.phase !== 'lobby') return null;
+    if (room.players.length >= 4) return null;
+    const aiId = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    const aiNames = ['Bot Alpha', 'Bot Beta', 'Bot Gamma', 'Bot Delta'];
+    this._addPlayer(room, aiId, aiNames[room.players.length - 1] || 'Bot', true);
+    return room;
   }
 
   /** Join an existing room; returns room or null */
