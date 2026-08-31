@@ -254,12 +254,127 @@
   /* ══════════════════════════════════════
      GAME START
      ══════════════════════════════════════ */
+  /* ══════════════════════════════════════
+     PLAYER EMOJI REACTION FACES
+     ══════════════════════════════════════ */
+  var FACE_NEUTRAL = '😊';
+  var FACE_CRY     = '😭';
+  var FACE_LAUGH   = '😂';
+  var FACE_MOCK    = '🤣';
+  var FACE_SCARED  = '😰';
+  var FACE_COOL    = '😎';
+  var FACE_WIN     = '🥳';
+
+  var TAUNT_MESSAGES = [
+    'Haha! Loser!', 'Get rekt! 😂', 'Byeee! 👋',
+    'Down you go!', 'Enjoy the slide! 🐍', 'LOL noob!',
+    'Slippery! 😏', 'Oopsie! 💀',
+  ];
+  var CRY_MESSAGES = [
+    'Nooo! 😭', 'Why me!?', 'So unfair!',
+    'I hate snakes!', 'Ugh...', 'This game is rigged!',
+  ];
+  var CELEBRATE_MESSAGES = [
+    'Woohoo! 🎉', 'To the top!', 'Easy! 😎',
+    'See ya below!', 'Let\'s gooo!', 'I\'m flying! 🚀',
+  ];
+  var JEALOUS_MESSAGES = [
+    'Lucky... 😒', 'Whatever...', 'Show off!',
+    'That was MY ladder!', 'Hmph! 😤',
+  ];
+
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function renderPlayerFaces() {
+    var container = document.getElementById('player-faces');
+    if (!container || !gameState) return;
+    container.innerHTML = '';
+    for (var i = 0; i < gameState.players.length; i++) {
+      var p = gameState.players[i];
+      var div = document.createElement('div');
+      div.className = 'pface';
+      div.id = 'pface-' + i;
+      div.innerHTML =
+        '<div class="pface-emoji" id="pface-emoji-' + i + '">' + FACE_NEUTRAL + '</div>' +
+        '<div class="pface-name" style="color:' + p.color + '">' + (p.name || p.colorName) + (p.isAI ? ' 🤖' : '') + '</div>' +
+        '<div class="pface-bubble" id="pface-bubble-' + i + '"></div>';
+      container.appendChild(div);
+    }
+  }
+
+  function setFaceReaction(playerIdx, emoji, animClass, bubbleText, duration) {
+    duration = duration || 2500;
+    var emojiEl = document.getElementById('pface-emoji-' + playerIdx);
+    var bubbleEl = document.getElementById('pface-bubble-' + playerIdx);
+    if (!emojiEl) return;
+
+    emojiEl.textContent = emoji;
+    emojiEl.classList.remove('anim-cry', 'anim-laugh', 'anim-mock', 'anim-bounce');
+    // Force reflow for re-triggering animation
+    void emojiEl.offsetWidth;
+    if (animClass) emojiEl.classList.add(animClass);
+
+    if (bubbleEl && bubbleText) {
+      bubbleEl.textContent = bubbleText;
+      bubbleEl.classList.add('show');
+    }
+
+    setTimeout(function () {
+      if (emojiEl) {
+        emojiEl.textContent = FACE_NEUTRAL;
+        emojiEl.classList.remove('anim-cry', 'anim-laugh', 'anim-mock', 'anim-bounce');
+      }
+      if (bubbleEl) {
+        bubbleEl.classList.remove('show');
+      }
+    }, duration);
+  }
+
+  function triggerSnakeReaction(playerIdx) {
+    // The player who got bitten: cry
+    setFaceReaction(playerIdx, FACE_CRY, 'anim-cry', pickRandom(CRY_MESSAGES), 3000);
+    // All other players: mock/laugh
+    if (gameState) {
+      for (var i = 0; i < gameState.players.length; i++) {
+        if (i !== playerIdx) {
+          setFaceReaction(i, FACE_MOCK, 'anim-mock', pickRandom(TAUNT_MESSAGES), 3000);
+        }
+      }
+    }
+  }
+
+  function triggerLadderReaction(playerIdx) {
+    // The player who climbed: celebrate
+    setFaceReaction(playerIdx, FACE_COOL, 'anim-laugh', pickRandom(CELEBRATE_MESSAGES), 3000);
+    // Others: jealous/scared
+    if (gameState) {
+      for (var i = 0; i < gameState.players.length; i++) {
+        if (i !== playerIdx) {
+          setFaceReaction(i, FACE_SCARED, 'anim-bounce', pickRandom(JEALOUS_MESSAGES), 3000);
+        }
+      }
+    }
+  }
+
+  function triggerWinReaction(playerIdx) {
+    setFaceReaction(playerIdx, FACE_WIN, 'anim-laugh', 'I WON! 🏆', 5000);
+    if (gameState) {
+      for (var i = 0; i < gameState.players.length; i++) {
+        if (i !== playerIdx) {
+          setFaceReaction(i, FACE_CRY, 'anim-cry', 'GG... 😢', 5000);
+        }
+      }
+    }
+  }
+
   socket.on('sl:game-started', function () {
     showScreen('game');
     SLBoard.init(document.getElementById('sl-canvas'));
     playerLastRoll = {};
     document.getElementById('move-log').innerHTML = '';
     addLog('Game started!', '#4d9de0', 'info');
+    // Render faces after a short delay so gameState is available
+    setTimeout(function () { renderPlayerFaces(); }, 300);
   });
 
   /* ── Exit / Restart buttons ── */
@@ -330,12 +445,19 @@
             : ' 🪜 ladder! ' + sl.from + '→' + sl.to);
           addLog(slMsg, pColor, sl.type === 'snake' ? 'snake' : 'ladder');
           showToast(slMsg, sl.type === 'snake' ? 'snake' : 'ladder');
+          // Trigger emoji reactions!
+          if (sl.type === 'snake') {
+            triggerSnakeReaction(result.playerIdx);
+          } else {
+            triggerLadderReaction(result.playerIdx);
+          }
           return SLBoard.animateToken(result.playerIdx, sl.from, sl.to, 400);
         }
       }).then(function () {
         if (result.won) {
           addLog('🏆 ' + pName + ' reached 100!', pColor, 'win');
           showToast(pName + ' reached 100! 🏆', 'win');
+          triggerWinReaction(result.playerIdx);
         }
         if (result.extraTurn) {
           addLog(pName + ' gets extra turn (rolled 6)', pColor, 'info');
