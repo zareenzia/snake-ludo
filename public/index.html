@@ -8,26 +8,91 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/hub.css" />
+  <style>
+    /* ── SPA sliding viewport ── */
+    html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; }
+    .spa-viewport {
+      width: 100%; height: 100vh; overflow: hidden; position: relative;
+    }
+    .spa-track {
+      display: flex; width: 200%; height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateX(0);
+    }
+    .spa-track.slid { transform: translateX(-50%); }
+    .spa-panel {
+      width: 50%; height: 100%; flex-shrink: 0;
+      overflow-y: auto; overflow-x: hidden;
+    }
+    #panel-hub {
+      display: flex; justify-content: center; align-items: center;
+    }
+    #panel-game { position: relative; }
+    #game-frame {
+      width: 100%; height: 100%; border: none;
+      background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e);
+    }
+    /* Back button overlay on game panel */
+    .spa-back-btn {
+      position: absolute; top: 14px; left: 14px; z-index: 50;
+      background: rgba(20,20,40,0.85); color: #ccd; border: 1px solid rgba(255,255,255,0.12);
+      padding: 6px 16px; border-radius: 10px; font-family: 'Nunito', sans-serif;
+      font-weight: 700; font-size: 0.85rem; cursor: pointer;
+      transition: all 0.2s; backdrop-filter: blur(8px);
+    }
+    .spa-back-btn:hover { background: rgba(40,40,70,0.95); color: #fff; }
+    /* Loading overlay */
+    .spa-loading {
+      position: absolute; inset: 0; z-index: 40;
+      display: flex; justify-content: center; align-items: center;
+      background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e);
+      transition: opacity 0.3s; pointer-events: none;
+    }
+    .spa-loading.hidden { opacity: 0; }
+    .spa-loading-spinner {
+      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: #0ead69; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-  <div class="hub-container">
-    <div class="hub-header">
-      <div class="hub-logo">🎲</div>
-      <h1 class="hub-title">Game Hub</h1>
-      <p class="hub-subtitle">Choose your game</p>
-    </div>
+  <div class="spa-viewport">
+    <div class="spa-track" id="spa-track">
 
-    <div class="game-cards" id="game-cards">
-      <!-- Cards are rendered by JS so new modes can be added via config -->
+      <!-- ═══ Panel 1: Hub Menu ═══ -->
+      <div class="spa-panel" id="panel-hub">
+        <div class="hub-container">
+          <div class="hub-header">
+            <div class="hub-logo">🎲</div>
+            <h1 class="hub-title">Game Hub</h1>
+            <p class="hub-subtitle">Choose your game</p>
+            <div class="hub-profile-bar" id="hub-profile">
+              <span class="hub-level" id="hub-level">Lvl 1</span>
+              <span class="hub-coins">🪙 <strong id="hub-coins">0</strong></span>
+              <a href="/shop.html" class="hub-shop-btn">🛒 Shop</a>
+            </div>
+          </div>
+          <div class="game-cards" id="game-cards"></div>
+        </div>
+      </div>
+
+      <!-- ═══ Panel 2: Game (loaded via iframe) ═══ -->
+      <div class="spa-panel" id="panel-game">
+        <button class="spa-back-btn" id="spa-back">← Back to Menu</button>
+        <div class="spa-loading" id="spa-loading">
+          <div class="spa-loading-spinner"></div>
+        </div>
+        <iframe id="game-frame" src="about:blank"></iframe>
+      </div>
+
     </div>
   </div>
 
+  <script src="js/profile.js"></script>
   <script>
-    /**
-     * Game registry — add new modes here.
-     * Each entry gets a card on the hub menu.
-     */
-    const GAMES = [
+    var GAMES = [
       {
         id: 'ludo',
         title: 'Ludo',
@@ -48,20 +113,83 @@
       },
     ];
 
-    const container = document.getElementById('game-cards');
-    GAMES.forEach(g => {
-      const card = document.createElement('a');
-      card.href = g.url;
+    var track = document.getElementById('spa-track');
+    var frame = document.getElementById('game-frame');
+    var loading = document.getElementById('spa-loading');
+    var container = document.getElementById('game-cards');
+    var currentGameUrl = null;
+
+    // Preload game URLs in hidden iframes for instant switching
+    var preloaded = {};
+
+    // Render game cards
+    GAMES.forEach(function (g) {
+      var card = document.createElement('div');
       card.className = 'game-card';
       card.style.setProperty('--card-color', g.color);
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
       card.innerHTML =
         '<div class="card-badge" style="background:' + g.color + '">' + g.badge + '</div>' +
         '<div class="card-icon">' + g.icon + '</div>' +
         '<h2 class="card-title">' + g.title + '</h2>' +
         '<p class="card-desc">' + g.desc + '</p>' +
         '<div class="card-play">Play →</div>';
+
+      card.addEventListener('click', function () {
+        openGame(g.url);
+      });
       container.appendChild(card);
     });
+
+    function openGame(url) {
+      currentGameUrl = url;
+      loading.classList.remove('hidden');
+
+      // Load the game in iframe
+      frame.src = url;
+      frame.onload = function () {
+        loading.classList.add('hidden');
+        // Hide the "back to menu" link inside the iframe since we have our own
+        try {
+          var iframeDoc = frame.contentDocument || frame.contentWindow.document;
+          var backLink = iframeDoc.getElementById('back-link');
+          if (backLink) backLink.style.display = 'none';
+        } catch (e) { /* cross-origin safety */ }
+      };
+
+      // Slide to game panel
+      track.classList.add('slid');
+    }
+
+    function goBack() {
+      track.classList.remove('slid');
+      // After slide animation, clean up iframe
+      setTimeout(function () {
+        frame.src = 'about:blank';
+        currentGameUrl = null;
+        loading.classList.remove('hidden');
+        // Refresh profile (coins may have changed)
+        refreshProfile();
+      }, 550);
+    }
+
+    document.getElementById('spa-back').addEventListener('click', goBack);
+
+    // Handle keyboard (Escape to go back)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && track.classList.contains('slid')) {
+        goBack();
+      }
+    });
+
+    // Profile display
+    function refreshProfile() {
+      var prof = GameProfile.get();
+      document.getElementById('hub-coins').textContent = prof.coins;
+      document.getElementById('hub-level').textContent = 'Lvl ' + prof.level;
+    }
+    refreshProfile();
   </script>
 </body>
 </html>

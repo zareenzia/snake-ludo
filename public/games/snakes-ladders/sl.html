@@ -78,6 +78,14 @@
         <!-- Per-player dice row -->
         <div id="player-dice-row" class="player-dice-row"></div>
 
+        <!-- Power-ups & coins bar -->
+        <div class="powerup-bar" id="powerup-bar">
+          <span class="pu-coins" id="game-coins">🪙 <strong>0</strong></span>
+          <button class="pu-btn" id="pu-shield" title="Snake Shield — blocks next snake">🛡️ Shield <span class="pu-badge" id="pu-shield-ct">0</span></button>
+          <button class="pu-btn" id="pu-double" title="Double Jump — double next roll">⚡ Double <span class="pu-badge" id="pu-double-ct">0</span></button>
+          <button class="pu-btn" id="pu-reroll" title="Reroll — reroll the dice">🔄 Reroll <span class="pu-badge" id="pu-reroll-ct">0</span></button>
+        </div>
+
         <div id="sl-message" class="message-area"></div>
       </div>
 
@@ -101,6 +109,8 @@
   <div id="toast-container"></div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/profile.js"></script>
+  <script src="/js/shop.js"></script>
   <script src="js/sl-board.js"></script>
   <script src="js/sl-client.js"></script>
 </body>

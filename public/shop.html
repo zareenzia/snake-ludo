@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop — Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/hub.css" />
+  <style>
+    body { font-family: 'Nunito', sans-serif; background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e); color: #eee; min-height: 100vh; margin: 0; }
+    .back-link { position: fixed; top: 16px; left: 16px; color: #aab; text-decoration: none; font-weight: 700; z-index: 100; }
+    .back-link:hover { color: #fff; }
+
+    .shop-container { max-width: 900px; margin: 0 auto; padding: 80px 20px 40px; }
+
+    /* Profile bar */
+    .profile-bar {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      background: rgba(255,255,255,0.06); border-radius: 16px; padding: 16px 24px;
+      margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .profile-avatar { font-size: 2.5rem; }
+    .profile-info { flex: 1; }
+    .profile-name { font-size: 1.2rem; font-weight: 800; }
+    .profile-level { color: #f5c542; font-weight: 700; font-size: 0.85rem; }
+    .xp-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 4px; }
+    .xp-fill { height: 100%; background: linear-gradient(90deg, #f5c542, #e6a800); border-radius: 3px; transition: width 0.5s; }
+    .coin-display { font-size: 1.4rem; font-weight: 800; color: #f5c542; }
+    .coin-display .coin-icon { margin-right: 4px; }
+
+    /* Stats */
+    .stats-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; }
+    .stat-card {
+      background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px 18px;
+      flex: 1; min-width: 120px; text-align: center; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .stat-val { font-size: 1.4rem; font-weight: 800; }
+    .stat-label { font-size: 0.7rem; color: #889; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Section title */
+    .section-title { font-size: 1.3rem; font-weight: 800; margin: 28px 0 14px; display: flex; align-items: center; gap: 8px; }
+
+    /* Shop grid */
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+    .shop-card {
+      background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px;
+      text-align: center; border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.2s; position: relative;
+    }
+    .shop-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .shop-card.owned { border-color: #0ead69; }
+    .shop-card.equipped { border-color: #f5c542; box-shadow: 0 0 12px rgba(245,197,66,0.2); }
+    .shop-emoji { font-size: 2.4rem; margin-bottom: 6px; }
+    .shop-name { font-weight: 700; font-size: 0.95rem; }
+    .shop-desc { font-size: 0.72rem; color: #889; margin: 4px 0 10px; }
+    .shop-price { font-weight: 800; color: #f5c542; font-size: 0.9rem; }
+    .shop-btn {
+      display: inline-block; padding: 6px 16px; border-radius: 8px; border: none;
+      font-family: inherit; font-weight: 700; font-size: 0.8rem; cursor: pointer;
+      transition: all 0.2s; margin-top: 6px;
+    }
+    .shop-btn.buy { background: linear-gradient(135deg, #0ead69, #0c8a52); color: #fff; }
+    .shop-btn.buy:hover { transform: scale(1.05); }
+    .shop-btn.buy:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .shop-btn.equip { background: rgba(245,197,66,0.2); color: #f5c542; border: 1px solid #f5c54255; }
+    .shop-btn.equip:hover { background: rgba(245,197,66,0.3); }
+    .shop-btn.equipped-btn { background: rgba(255,255,255,0.08); color: #888; cursor: default; }
+    .shop-owned-badge { position: absolute; top: 8px; right: 8px; font-size: 0.65rem; background: #0ead6933; color: #0ead69; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+
+    /* Power-up inventory */
+    .pu-count { font-size: 0.75rem; color: #aab; margin-top: 2px; }
+
+    /* Achievements */
+    .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .ach-card {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.04); border-radius: 10px; padding: 10px 14px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .ach-card.unlocked { border-color: #f5c542; background: rgba(245,197,66,0.06); }
+    .ach-card.locked { opacity: 0.4; }
+    .ach-emoji { font-size: 1.6rem; }
+    .ach-name { font-weight: 700; font-size: 0.85rem; }
+    .ach-desc { font-size: 0.7rem; color: #889; }
+
+    /* Toast */
+    .shop-toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: rgba(14,173,105,0.95); color: #fff; padding: 10px 24px;
+      border-radius: 12px; font-weight: 700; font-size: 0.9rem;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.4); z-index: 200;
+      opacity: 0; transition: all 0.3s; pointer-events: none;
+    }
+    .shop-toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+  </style>
+</head>
+<body>
+  <a href="/" class="back-link">← Menu</a>
+
+  <div class="shop-container">
+    <!-- Profile bar -->
+    <div class="profile-bar">
+      <div class="profile-avatar">🎮</div>
+      <div class="profile-info">
+        <div class="profile-name" id="prof-name">Player</div>
+        <div class="profile-level" id="prof-level">Level 1</div>
+        <div class="xp-bar"><div class="xp-fill" id="prof-xp" style="width:0%"></div></div>
+      </div>
+      <div class="coin-display"><span class="coin-icon">🪙</span> <span id="prof-coins">0</span></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- Power-ups inventory -->
+    <div class="section-title">⚡ Power-Ups</div>
+    <div class="shop-grid" id="grid-powerup"></div>
+
+    <!-- Token skins -->
+    <div class="section-title">🎭 Token Skins</div>
+    <div class="shop-grid" id="grid-token"></div>
+
+    <!-- Dice skins -->
+    <div class="section-title">🎲 Dice Skins</div>
+    <div class="shop-grid" id="grid-dice"></div>
+
+    <!-- Achievements -->
+    <div class="section-title">🏅 Achievements</div>
+    <div class="ach-grid" id="ach-grid"></div>
+  </div>
+
+  <div class="shop-toast" id="shop-toast"></div>
+
+  <script src="js/profile.js"></script>
+  <script src="js/shop.js"></script>
+  <script>
+  (function () {
+    var prof = GameProfile.get();
+
+    function showToast(msg) {
+      var el = document.getElementById('shop-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(function () { el.classList.remove('show'); }, 2500);
+    }
+
+    function refreshAll() {
+      prof = GameProfile.get();
+      GameProfile.checkAchievements();
+
+      // Profile bar
+      document.getElementById('prof-name').textContent = prof.name;
+      document.getElementById('prof-level').textContent = 'Level ' + prof.level;
+      document.getElementById('prof-coins').textContent = prof.coins;
+      var needed = GameProfile.xpForLevel(prof.level);
+      document.getElementById('prof-xp').style.width = Math.min(100, (prof.xp / needed) * 100) + '%';
+
+      // Stats
+      var sg = document.getElementById('stats-grid');
+      sg.innerHTML =
+        statCard(prof.stats.gamesPlayed, 'Games Played') +
+        statCard(prof.stats.wins, 'Wins') +
+        statCard(prof.stats.laddersClimbed, 'Ladders') +
+        statCard(prof.stats.snakesBitten, 'Snakes') +
+        statCard(prof.stats.sixesRolled, 'Sixes') +
+        statCard(prof.stats.captures, 'Captures');
+
+      // Shop grids
+      renderGrid('grid-powerup', 'powerup');
+      renderGrid('grid-token', 'token');
+      renderGrid('grid-dice', 'dice');
+
+      // Achievements
+      renderAchievements();
+    }
+
+    function statCard(val, label) {
+      return '<div class="stat-card"><div class="stat-val">' + val + '</div><div class="stat-label">' + label + '</div></div>';
+    }
+
+    function renderGrid(gridId, type) {
+      var items = GameShop.getItemsByType(type);
+      var html = '';
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var owned = GameProfile.hasItem(it.id);
+        var equipped = prof.equipped[type] === it.id;
+        var isPU = type === 'powerup';
+        var puCount = isPU ? GameProfile.getPowerUpCount(it.data.puType) : 0;
+        var canAfford = prof.coins >= it.data.price;
+
+        html += '<div class="shop-card' + (owned && !isPU ? ' owned' : '') + (equipped ? ' equipped' : '') + '">';
+        if (owned && !isPU) html += '<div class="shop-owned-badge">Owned</div>';
+        html += '<div class="shop-emoji">' + it.data.emoji + '</div>';
+        html += '<div class="shop-name">' + it.data.name + '</div>';
+        html += '<div class="shop-desc">' + it.data.desc + '</div>';
+
+        if (isPU) {
+          html += '<div class="pu-count">You have: ' + puCount + '</div>';
+          html += '<div class="shop-price">🪙 ' + it.data.price + '</div>';
+          html += '<button class="shop-btn buy" data-buy="' + it.id + '"' + (!canAfford ? ' disabled' : '') + '>Buy</button>';
+        } else if (owned) {
+          if (equipped) {
+            html += '<button class="shop-btn equipped-btn">✓ Equipped</button>';
+          } else {
+            html += '<button class="shop-btn equip" data-equip-type="' + type + '" data-equip-id="' + it.id + '">Equip</button>';
+          }
+        } else {
+          html += '<div class="shop-price">🪙 ' + it.data.price + '</div>';
+          html += '<button class="shop-btn buy" data-buy="' + it.id + '"' + (!canAfford ? ' disabled' : '') + '>Buy</button>';
+        }
+        html += '</div>';
+      }
+      document.getElementById(gridId).innerHTML = html;
+    }
+
+    function renderAchievements() {
+      var html = '';
+      for (var id in GameShop.ACHIEVEMENTS) {
+        var a = GameShop.ACHIEVEMENTS[id];
+        var unlocked = prof.achievements.indexOf(id) !== -1;
+        html += '<div class="ach-card ' + (unlocked ? 'unlocked' : 'locked') + '">';
+        html += '<div class="ach-emoji">' + a.emoji + '</div>';
+        html += '<div><div class="ach-name">' + a.name + '</div><div class="ach-desc">' + a.desc + '</div></div>';
+        html += '</div>';
+      }
+      document.getElementById('ach-grid').innerHTML = html;
+    }
+
+    // Event delegation for buy/equip buttons
+    document.addEventListener('click', function (e) {
+      var buyId = e.target.getAttribute('data-buy');
+      if (buyId) {
+        var result = GameShop.buyItem(buyId);
+        showToast(result.ok ? result.msg : result.error);
+        refreshAll();
+        return;
+      }
+      var equipId = e.target.getAttribute('data-equip-id');
+      var equipType = e.target.getAttribute('data-equip-type');
+      if (equipId && equipType) {
+        GameProfile.equipItem(equipType, equipId);
+        showToast('Equipped!');
+        refreshAll();
+      }
+    });
+
+    refreshAll();
+  })();
+  </script>
+</body>
+</html>

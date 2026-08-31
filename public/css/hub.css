@@ -9,6 +9,21 @@ body {
 
 .hub-container { text-align: center; padding: 24px; max-width: 700px; width: 100%; }
 
+/* Profile / coins bar */
+.hub-profile-bar {
+  display: inline-flex; align-items: center; gap: 14px;
+  background: rgba(255,255,255,0.06); border-radius: 30px; padding: 8px 20px;
+  margin-top: 12px; border: 1px solid rgba(255,255,255,0.08);
+}
+.hub-level { color: #9b59b6; font-weight: 800; font-size: 0.85rem; }
+.hub-coins { color: #f5c542; font-size: 0.95rem; }
+.hub-shop-btn {
+  background: linear-gradient(135deg, #0ead69, #0c8a52); color: #fff;
+  padding: 5px 14px; border-radius: 10px; text-decoration: none;
+  font-weight: 700; font-size: 0.8rem; transition: all 0.2s;
+}
+.hub-shop-btn:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(14,173,105,0.3); }
+
 .hub-logo {
   font-size: 4rem; margin-bottom: 4px;
   animation: hub-float 3s ease-in-out infinite;
