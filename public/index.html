@@ -9,9 +9,13 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <link rel="stylesheet" href="css/hub.css" />
-  <link rel="prefetch" href="/games/ludo/ludo.html" />
+  <link rel="preload" href="/socket.io/socket.io.js" as="script" />
   <link rel="prefetch" href="/games/snakes-ladders/sl.html" />
-  <link rel="prefetch" href="/socket.io/socket.io.js" />
+  <link rel="prefetch" href="/games/snakes-ladders/css/sl.css" />
+  <link rel="prefetch" href="/games/snakes-ladders/js/sl-board.js" />
+  <link rel="prefetch" href="/games/snakes-ladders/js/sl-client.js" />
+  <link rel="prefetch" href="/games/ludo/ludo.html" />
+  <link rel="prefetch" href="/games/ludo/css/ludo.css" />
   <style>
     html, body { margin: 0; padding: 0; height: 100%; }
     body { overflow: hidden; }
@@ -54,7 +58,7 @@
       position: relative;
     }
     .split-container.split .hub-panel {
-      width: 38%; min-width: 320px;
+      width: 0; min-width: 0; overflow: hidden; padding: 0;
     }
 
     /* Right: Game panel */
@@ -64,7 +68,7 @@
       border-left: 2px solid transparent;
     }
     .split-container.split .game-panel {
-      width: 62%;
+      width: 100%;
       border-left-color: rgba(255,255,255,0.06);
     }
 
@@ -92,21 +96,36 @@
     }
     .game-back-btn:hover { background: rgba(50,50,80,0.95); color: #fff; }
 
-    /* Loading spinner */
+    /* Loading spinner — animated snake */
     .game-loading {
       position: absolute; inset: 0; z-index: 40;
-      display: flex; justify-content: center; align-items: center;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px;
       background: linear-gradient(135deg, #0f0c29ee, #1a1a2eee);
       transition: opacity 0.3s;
     }
     .game-loading.hidden { opacity: 0; pointer-events: none; }
-    .game-spinner {
-      width: 44px; height: 44px;
-      border: 4px solid rgba(255,255,255,0.08);
-      border-top-color: #0ead69; border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+    .snake-loader {
+      font-size: 3rem; animation: snake-slither 1.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(14,173,105,0.5));
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .snake-loader-text {
+      font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 700;
+      color: rgba(255,255,255,0.5); letter-spacing: 2px;
+      animation: snake-dots 1.5s steps(3) infinite;
+    }
+    .snake-loader-text::after { content: ''; }
+    @keyframes snake-slither {
+      0%   { transform: translateX(-20px) rotate(-10deg) scaleX(1); }
+      25%  { transform: translateX(0px) rotate(5deg) scaleX(1.1); }
+      50%  { transform: translateX(20px) rotate(-5deg) scaleX(1); }
+      75%  { transform: translateX(0px) rotate(8deg) scaleX(1.1); }
+      100% { transform: translateX(-20px) rotate(-10deg) scaleX(1); }
+    }
+    @keyframes snake-dots {
+      0%   { content: '.'; }
+      33%  { content: '..'; }
+      66%  { content: '...'; }
+    }
 
     /* Divider glow line */
     .split-container.split .game-panel::before {
@@ -122,16 +141,9 @@
       transform: scale(0.97) !important;
     }
 
-    /* Hub shrink adjustments */
-    .split-container.split .hub-container { padding: 16px 12px; }
-    .split-container.split .hub-logo { font-size: 2.5rem; }
-    .split-container.split .hub-title { font-size: 1.6rem; }
-    .split-container.split .hub-subtitle { font-size: 0.8rem; }
-    .split-container.split .game-cards { gap: 12px; }
-    .split-container.split .game-card { padding: 20px 16px 16px; }
-    .split-container.split .card-icon { font-size: 2rem; }
-    .split-container.split .card-title { font-size: 1rem; }
-    .split-container.split .card-desc { font-size: 0.72rem; }
+    /* Hub completely hidden when game is active */
+    .split-container.split .hub-panel { display: none; }
+    .split-container.split .game-panel { border-left: none; }
 
     /* Mobile: stack vertically, game takes full screen */
     @media (max-width: 768px) {
@@ -175,7 +187,8 @@
     <div class="game-panel" id="game-panel">
       <button class="game-back-btn" id="btn-back">← Close</button>
       <div class="game-loading" id="game-loading">
-        <div class="game-spinner"></div>
+        <div class="snake-loader">🐍</div>
+        <div class="snake-loader-text">Loading</div>
       </div>
       <!-- Iframes are pre-created per game for instant switching -->
     </div>
@@ -212,10 +225,12 @@
     var activeCard = null;
     var activeFrameId = null;
 
-    /* ── Pre-warm: create hidden iframes for each game ── */
+    /* ── Idle-time pre-warm: create iframes after hub renders ── */
     var gameFrames = {};
     var gameLoaded = {};
-    GAMES.forEach(function (g) {
+
+    function preWarmGame(g) {
+      if (gameFrames[g.id]) return;
       var iframe = document.createElement('iframe');
       iframe.id = 'game-frame-' + g.id;
       iframe.className = 'game-frame';
@@ -228,12 +243,18 @@
           var bl = doc.getElementById('back-link');
           if (bl) bl.style.display = 'none';
         } catch (e) {}
-        // If this game is currently active, hide the spinner
         if (activeFrameId === g.id) loadingEl.classList.add('hidden');
       };
       gamePanelEl.appendChild(iframe);
       gameFrames[g.id] = iframe;
-    });
+    }
+
+    // Pre-warm iframes after 800ms idle so hub renders instantly
+    setTimeout(function () {
+      GAMES.forEach(function (g, i) {
+        setTimeout(function () { preWarmGame(g); }, i * 300);
+      });
+    }, 800);
 
     GAMES.forEach(function (g) {
       var card = document.createElement('div');
@@ -256,8 +277,13 @@
       card.classList.add('active');
       activeFrameId = game.id;
 
+      // Ensure iframe exists (fallback if pre-warm hasn't fired yet)
+      preWarmGame(game);
+
       // Hide all frames, show the selected one
-      GAMES.forEach(function (g) { gameFrames[g.id].style.display = 'none'; });
+      GAMES.forEach(function (g) {
+        if (gameFrames[g.id]) gameFrames[g.id].style.display = 'none';
+      });
       gameFrames[game.id].style.display = 'block';
 
       // Show spinner only if not yet loaded
@@ -276,7 +302,7 @@
       activeFrameId = null;
       setTimeout(function () {
         // Just hide, don't destroy — keeps iframe warm for instant re-open
-        GAMES.forEach(function (g) { gameFrames[g.id].style.display = 'none'; });
+        GAMES.forEach(function (g) { if (gameFrames[g.id]) gameFrames[g.id].style.display = 'none'; });
         loadingEl.classList.remove('hidden');
         refreshProfile();
       }, 650);

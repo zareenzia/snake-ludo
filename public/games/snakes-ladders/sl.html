@@ -73,47 +73,38 @@
     </div>
   </div>
 
-  <!-- ══════ GAME SCREEN (restructured layout) ══════ -->
-  <div id="screen-game" class="screen hidden">
-    <div class="game-layout">
+  <!-- ══════ GAME SCREEN (CSS Grid with named areas) ══════ -->
+  <div id="screen-game" class="screen hidden game-screen">
 
-      <!-- Left: Move log -->
-      <div class="move-log-panel">
-        <div class="log-header">📜 Move Log</div>
-        <div class="log-entries" id="move-log"></div>
-      </div>
-
-      <!-- Center: Board + controls -->
-      <div class="game-center">
-        <!-- Player emoji faces -->
-        <div class="player-faces" id="player-faces"></div>
-        <div class="game-top-bar">
-          <div id="sl-turn-indicator" class="turn-indicator"></div>
-          <div class="game-actions">
-            <button id="btn-restart-game" class="btn btn-sm btn-secondary" title="Restart">↻ Restart</button>
-            <button id="btn-exit-game" class="btn btn-sm btn-danger" title="Exit">✕ Exit</button>
-          </div>
-        </div>
-
-        <div id="sl-board-wrap" class="board-wrap">
-          <canvas id="sl-canvas"></canvas>
-        </div>
-
-        <!-- Per-player dice row -->
-        <div id="player-dice-row" class="player-dice-row"></div>
-
-        <!-- Power-ups & coins bar -->
-        <div class="powerup-bar" id="powerup-bar">
-          <span class="pu-coins" id="game-coins">🪙 <strong>0</strong></span>
-          <button class="pu-btn" id="pu-shield" title="Snake Shield — blocks next snake">🛡️ Shield <span class="pu-badge" id="pu-shield-ct">0</span></button>
-          <button class="pu-btn" id="pu-double" title="Double Jump — double next roll">⚡ Double <span class="pu-badge" id="pu-double-ct">0</span></button>
-          <button class="pu-btn" id="pu-reroll" title="Reroll — reroll the dice">🔄 Reroll <span class="pu-badge" id="pu-reroll-ct">0</span></button>
-        </div>
-
-        <div id="sl-message" class="message-area"></div>
-      </div>
-
+    <!-- Sidebar: Move Log only -->
+    <div class="sidebar move-log-panel">
+      <div class="log-header">📜 Move Log</div>
+      <div class="log-entries" id="move-log"></div>
     </div>
+
+    <!-- Player panels in left column, below move log -->
+    <div class="sidebar-panels">
+      <div id="player-panels" class="player-panels"></div>
+    </div>
+
+    <!-- Header: actions only (avatars moved into player panels) -->
+    <div class="header game-header">
+      <div id="sl-turn-indicator" class="turn-indicator"></div>
+      <div class="game-actions">
+        <button id="btn-restart-game" class="btn btn-sm btn-secondary" title="Restart">↻ Restart</button>
+        <button id="btn-exit-game" class="btn btn-sm btn-danger" title="Exit">✕ Exit</button>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div class="board-wrap" id="sl-board-wrap">
+      <canvas id="sl-canvas"></canvas>
+    </div>
+
+    <!-- Hidden container for JS to find player-faces (rendered inside pp-blocks now) -->
+    <div id="player-faces" style="display:none"></div>
+
+    <div id="sl-message" class="message-area"></div>
   </div>
 
   <!-- ══════ GAME OVER SCREEN ══════ -->

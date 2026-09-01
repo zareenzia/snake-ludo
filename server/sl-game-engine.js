@@ -30,6 +30,30 @@ const DEFAULT_LADDERS = [
   { start: 80, end: 99 },
 ];
 
+/** Power-up definitions: placed on fixed squares (avoid snake/ladder squares) */
+const DEFAULT_POWERUPS = [
+  // 7 shields (🛡️) — protects from next snake
+  { sq: 5,  type: 'shield' },
+  { sq: 15, type: 'shield' },
+  { sq: 33, type: 'shield' },
+  { sq: 44, type: 'shield' },
+  { sq: 56, type: 'shield' },
+  { sq: 73, type: 'shield' },
+  { sq: 89, type: 'shield' },
+  // 5 doubles (⚡) — next roll moves double the squares
+  { sq: 10, type: 'double' },
+  { sq: 35, type: 'double' },
+  { sq: 58, type: 'double' },
+  { sq: 77, type: 'double' },
+  { sq: 91, type: 'double' },
+  // 5 rerolls (🎲) — can reroll once if unhappy with dice
+  { sq: 12, type: 'reroll' },
+  { sq: 39, type: 'reroll' },
+  { sq: 53, type: 'reroll' },
+  { sq: 66, type: 'reroll' },
+  { sq: 84, type: 'reroll' },
+];
+
 class SLGameEngine {
   /**
    * Initialize game state for a room.
@@ -50,6 +74,10 @@ class SLGameEngine {
       [order[i], order[j]] = [order[j], order[i]];
     }
 
+    // Build power-up map: sq → type (only for uncollected ones)
+    const powerupMap = {};
+    DEFAULT_POWERUPS.forEach(pu => { powerupMap[pu.sq] = pu.type; });
+
     return {
       turnOrder: order,
       currentTurnIdx: 0,         // index into turnOrder
@@ -57,6 +85,10 @@ class SLGameEngine {
       snakes: DEFAULT_SNAKES,
       ladders: DEFAULT_LADDERS,
       snakeLadderMap,
+      powerups: DEFAULT_POWERUPS.map(pu => ({ ...pu })),  // remaining on board
+      powerupMap,
+      // Each player's collected power-ups
+      inventory: players.map(() => ({ shield: 0, double: 0, reroll: 0 })),
       settings: { ...settings },
       consecutive6: 0,
       finished: [],              // player indices in finish order
@@ -115,6 +147,16 @@ class SLGameEngine {
 
     gs.positions[playerIdx] = newPos;
 
+    // Collect power-up if present on this square
+    let collectedPowerup = null;
+    if (newPos > 0 && gs.powerupMap[newPos]) {
+      collectedPowerup = gs.powerupMap[newPos];
+      gs.inventory[playerIdx][collectedPowerup]++;
+      // Remove from board
+      delete gs.powerupMap[newPos];
+      gs.powerups = gs.powerups.filter(pu => pu.sq !== newPos);
+    }
+
     // Check win
     if (newPos === 100) {
       won = true;
@@ -155,6 +197,7 @@ class SLGameEngine {
       snakeLadder,
       extraTurn,
       won,
+      collectedPowerup,
     };
 
     gs.lastEvent = result;
@@ -191,6 +234,8 @@ class SLGameEngine {
       positions: gs.positions,
       snakes: gs.snakes,
       ladders: gs.ladders,
+      powerups: gs.powerups,         // remaining power-ups on board
+      inventory: gs.inventory,       // each player's collected power-ups
       finished: gs.finished,
       phase: gs.phase,
       lastRoll: gs.lastRoll,

@@ -23,7 +23,13 @@ var SLBoard = (function () {
   }
 
   function _resize() {
-    var maxW = Math.min(window.innerWidth - 24, window.innerHeight - 280, 560);
+    // Account for sidebar (300px) + padding/gaps (~40px)
+    var sidebar = document.querySelector('.sidebar');
+    var sidebarW = sidebar ? sidebar.offsetWidth + 40 : 40;
+    var availW = window.innerWidth - sidebarW;
+    var availH = window.innerHeight - 160; // header + turn banner + padding
+    var maxW = Math.min(availW, availH, 800);
+    maxW = Math.max(maxW, 200); // minimum size
     cellPx = Math.floor(maxW / COLS);
     boardPx = cellPx * COLS;
     canvas.width = boardPx;
@@ -61,6 +67,7 @@ var SLBoard = (function () {
     if (state) {
       _drawLadders(state.ladders);
       _drawSnakes(state.snakes);
+      _drawPowerups(state.powerups);
       _drawTokens(state);
     }
   }
@@ -110,11 +117,19 @@ var SLBoard = (function () {
     for (var i = 0; i < ladders.length; i++) {
       var l = ladders[i];
       var from = sqToPixel(l.start), to = sqToPixel(l.end);
-      _drawLadderGraphic(from.x, from.y, to.x, to.y);
+      _drawLadderGraphic(from.x, from.y, to.x, to.y, i);
     }
   }
 
-  function _drawLadderGraphic(x1, y1, x2, y2) {
+  var LADDER_WOOD_TONES = [
+    { dark: '#b07c4f', mid: '#d4a56a', rung: '#c49a62' },
+    { dark: '#9c6b3a', mid: '#c8955c', rung: '#b88a52' },
+    { dark: '#a87040', mid: '#d09a5e', rung: '#bf9058' },
+    { dark: '#8b6035', mid: '#be8e55', rung: '#ae804c' },
+  ];
+
+  function _drawLadderGraphic(x1, y1, x2, y2, colorIdx) {
+    var tone = LADDER_WOOD_TONES[colorIdx % LADDER_WOOD_TONES.length];
     var dx = x2 - x1, dy = y2 - y1;
     var len = Math.sqrt(dx * dx + dy * dy);
     var nx = -dy / len, ny = dx / len;
@@ -125,16 +140,16 @@ var SLBoard = (function () {
 
     // Rails
     var woodGrad = ctx.createLinearGradient(x1, y1, x2, y2);
-    woodGrad.addColorStop(0, '#b07c4f');
-    woodGrad.addColorStop(0.5, '#d4a56a');
-    woodGrad.addColorStop(1, '#b07c4f');
-    ctx.strokeStyle = woodGrad; ctx.lineWidth = cellPx * 0.07;
+    woodGrad.addColorStop(0, tone.dark);
+    woodGrad.addColorStop(0.5, tone.mid);
+    woodGrad.addColorStop(1, tone.dark);
+    ctx.strokeStyle = woodGrad; ctx.lineWidth = cellPx * 0.055;
     ctx.beginPath(); ctx.moveTo(x1 + nx * gap, y1 + ny * gap); ctx.lineTo(x2 + nx * gap, y2 + ny * gap); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x1 - nx * gap, y1 - ny * gap); ctx.lineTo(x2 - nx * gap, y2 - ny * gap); ctx.stroke();
 
     // Rungs
     var count = Math.max(3, Math.round(len / (cellPx * 0.6)));
-    ctx.strokeStyle = '#c49a62'; ctx.lineWidth = cellPx * 0.045;
+    ctx.strokeStyle = tone.rung; ctx.lineWidth = cellPx * 0.045;
     for (var j = 1; j < count; j++) {
       var t = j / count;
       var rx = x1 + dx * t, ry = y1 + dy * t;
@@ -152,11 +167,21 @@ var SLBoard = (function () {
     for (var i = 0; i < snakes.length; i++) {
       var s = snakes[i];
       var from = sqToPixel(s.start), to = sqToPixel(s.end);
-      _drawSnakeCurve(from.x, from.y, to.x, to.y);
+      _drawSnakeCurve(from.x, from.y, to.x, to.y, i);
     }
   }
 
-  function _drawSnakeCurve(x1, y1, x2, y2) {
+  var SNAKE_COLORS = [
+    { body: 'rgba(233, 69, 96, 0.35)', inner: 'rgba(255, 130, 150, 0.22)', head: 'rgba(200, 30, 50, 0.65)' },
+    { body: 'rgba(156, 39, 176, 0.35)', inner: 'rgba(200, 130, 220, 0.22)', head: 'rgba(130, 20, 150, 0.65)' },
+    { body: 'rgba(46, 125, 50, 0.35)', inner: 'rgba(130, 200, 130, 0.22)', head: 'rgba(30, 100, 30, 0.65)' },
+    { body: 'rgba(211, 47, 47, 0.35)', inner: 'rgba(240, 140, 140, 0.22)', head: 'rgba(180, 30, 30, 0.65)' },
+    { body: 'rgba(123, 31, 162, 0.35)', inner: 'rgba(180, 120, 200, 0.22)', head: 'rgba(100, 20, 130, 0.65)' },
+    { body: 'rgba(27, 94, 32, 0.35)', inner: 'rgba(100, 180, 100, 0.22)', head: 'rgba(20, 80, 20, 0.65)' },
+  ];
+
+  function _drawSnakeCurve(x1, y1, x2, y2, colorIdx) {
+    var sc = SNAKE_COLORS[colorIdx % SNAKE_COLORS.length];
     var dx = x2 - x1, dy = y2 - y1;
     var len = Math.sqrt(dx * dx + dy * dy);
     var nx = -dy / len * cellPx * 0.9;
@@ -169,14 +194,14 @@ var SLBoard = (function () {
     ctx.bezierCurveTo(x1 + nx, y1 + ny, mx - nx, my - ny, mx, my);
     ctx.bezierCurveTo(mx + nx, my + ny, x2 - nx, y2 - ny, x2, y2);
 
-    ctx.strokeStyle = 'rgba(233, 69, 96, 0.45)';
-    ctx.lineWidth = cellPx * 0.18; ctx.lineCap = 'round'; ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 130, 150, 0.3)';
+    ctx.strokeStyle = sc.body;
+    ctx.lineWidth = cellPx * 0.12; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.strokeStyle = sc.inner;
     ctx.lineWidth = cellPx * 0.06; ctx.stroke();
 
     // Head
-    ctx.beginPath(); ctx.arc(x1, y1, cellPx * 0.14, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(200, 30, 50, 0.75)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x1, y1, cellPx * 0.10, 0, Math.PI * 2);
+    ctx.fillStyle = sc.head; ctx.fill();
     // Eyes
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(x1 - 2.5, y1 - 2, 2, 0, Math.PI * 2); ctx.fill();
@@ -186,6 +211,37 @@ var SLBoard = (function () {
     ctx.beginPath(); ctx.arc(x1 + 2.5, y1 - 2, 1, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
+  }
+
+  var POWERUP_ICONS = { shield: '🛡️', double: '⚡', reroll: '🎲' };
+  var POWERUP_COLORS = {
+    shield: 'rgba(77,157,224,0.18)',
+    double: 'rgba(245,197,66,0.18)',
+    reroll: 'rgba(14,173,105,0.18)'
+  };
+
+  function _drawPowerups(powerups) {
+    if (!powerups) return;
+    for (var i = 0; i < powerups.length; i++) {
+      var pu = powerups[i];
+      var c = sqToCell(pu.sq);
+      var x = c.col * cellPx, y = c.row * cellPx;
+
+      // Tinted background
+      ctx.fillStyle = POWERUP_COLORS[pu.type] || 'rgba(255,255,255,0.1)';
+      _roundRect(x + 2, y + 2, cellPx - 4, cellPx - 4, 4);
+      ctx.fill();
+
+      // Icon in bottom-right corner
+      var iconSize = cellPx * 0.32;
+      ctx.font = iconSize + 'px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(POWERUP_ICONS[pu.type] || '?', x + cellPx - 3, y + cellPx - 2);
+    }
+    // Reset alignment
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
   }
 
   /* Track where each player visually is during step-by-step animation */

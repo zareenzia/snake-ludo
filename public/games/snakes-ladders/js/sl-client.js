@@ -36,6 +36,9 @@
     Object.keys(screens).forEach(function (k) {
       screens[k].classList.toggle('hidden', k !== id);
     });
+    // Hide settings navbar during gameplay (game header has its own controls)
+    var nav = document.getElementById('settings-navbar');
+    if (nav) nav.style.display = (id === 'game') ? 'none' : '';
   }
 
   /* ══════════════════════════════════════
@@ -635,6 +638,20 @@
         if (gameState && gameState.players[result.playerIdx]) {
           gameState.players[result.playerIdx].position = result.newPos;
         }
+        if (result.collectedPowerup) {
+          var puNames = { shield: '🛡️ Shield', double: '⚡ Double', reroll: '🎲 Reroll' };
+          var puLabel = puNames[result.collectedPowerup] || result.collectedPowerup;
+          addLog(pName + ' collected ' + puLabel + '!', pColor, 'info');
+          showToast(pName + ' got ' + puLabel + '!', 'ladder');
+          // Update local inventory
+          if (gameState && gameState.inventory && gameState.inventory[result.playerIdx]) {
+            gameState.inventory[result.playerIdx][result.collectedPowerup]++;
+          }
+          // Remove from local powerups array
+          if (gameState && gameState.powerups) {
+            gameState.powerups = gameState.powerups.filter(function (pu) { return pu.sq !== result.newPos; });
+          }
+        }
         if (result.won) {
           addLog('🏆 ' + pName + ' reached 100!', pColor, 'win');
           showToast(pName + ' reached 100! 🏆', 'win');
@@ -706,41 +723,65 @@
 
   function renderPlayerDice(state) {
     if (!state || !state.players) return;
-    var row = document.getElementById('player-dice-row');
+    var container = document.getElementById('player-panels');
+    if (!container) return;
     var html = '';
     for (var i = 0; i < state.players.length; i++) {
       var p = state.players[i];
       var isActive = state.currentPlayerIdx === i && state.phase === 'playing';
       var isMe = i === myPlayerIdx;
-      var lastVal = playerLastRoll[i] || 0;
+      var lastVal = playerLastRoll[i] || 1;
       var finished = state.finished && state.finished.indexOf(i) >= 0;
+      var inv = state.inventory && state.inventory[i] ? state.inventory[i] : { shield: 0, double: 0, reroll: 0 };
 
-      html += '<div class="pdice-card ' + (isActive ? 'active' : 'inactive') +
-        '" style="--pc-color:' + p.color + ';--pc-color-glow:' + p.color + '40">' +
-        '<div class="pdice-name" style="color:' + p.color + '">' +
-        _esc(p.colorName) + (p.name ? '' : '') +
-        (finished ? ' ✓' : '') +
+      // Avatar info
+      var av = p.isAI ? null : getAvatar(p.avatar || 'smiley');
+      var neutralEmoji = p.isAI ? FACE_AI_NEUTRAL : (av ? av.neutral : FACE_NEUTRAL);
+
+      html += '<div class="pp-block' + (isActive ? ' pp-active' : '') + (finished ? ' pp-finished' : '') +
+        '" id="pface-' + i + '" data-is-ai="' + (p.isAI ? '1' : '0') + '" data-avatar="' + (p.avatar || (p.isAI ? 'robot' : 'smiley')) + '"' +
+        ' style="--pp-color:' + p.color + ';--pp-bg:' + p.color + '15;--pp-border:' + p.color +
+        ';--pface-color:' + p.color + ';--pface-glow:' + p.color + '44">' +
+
+        // Avatar row: emoji + name + badge
+        '<div class="pp-avatar-row">' +
+        '<div class="pface-emoji" id="pface-emoji-' + i + '">' + neutralEmoji + '</div>' +
+        '<div class="pp-info">' +
+        '<span class="pp-name">' + _esc(p.name || p.colorName).toUpperCase() + '</span>' +
+        (p.isAI ? '<span class="pp-tag">🤖 BOT</span>' : '<span class="pp-tag">👤 PLAYER</span>') +
+        (finished ? '<span class="pp-tag pp-done">✓ DONE</span>' : '') +
         '</div>' +
-        '<div class="pdice-face" id="pdice-face-' + i + '">' +
-        '<div class="pdice-inner" id="pdice-inner-' + i + '">' +
-        _dotsHtml(lastVal) +
-        '</div></div>';
+        '<div class="pface-bubble" id="pface-bubble-' + i + '"></div>' +
+        '</div>' +
 
-      // Position indicator
-      html += '<div class="pdice-pos">Sq: ' + (p.position || 0) + '</div>';
+        '<div class="pp-body">' +
 
-      // Roll button only for active player who is me (or show disabled for others)
+        '<div class="pp-dice-area">' +
+        '<div class="dice-scene" id="dice-scene-' + i + '">' +
+        '<div class="dice-cube" id="dice-cube-' + i + '" style="' + _cubeTransform(lastVal) + '">' +
+        _cubeFacesHtml() +
+        '</div></div>' +
+        '<div class="pp-sq">Sq ' + (p.position || 0) + '</div>' +
+        '</div>' +
+
+        '<div class="pp-powers">' +
+        '<div class="pp-pw"><span class="pp-pw-icon">🛡️</span><span class="pp-pw-ct">' + inv.shield + '</span></div>' +
+        '<div class="pp-pw"><span class="pp-pw-icon">⚡</span><span class="pp-pw-ct">' + inv.double + '</span></div>' +
+        '<div class="pp-pw"><span class="pp-pw-icon">🎲</span><span class="pp-pw-ct">' + inv.reroll + '</span></div>' +
+        '</div>' +
+
+        '</div>';
+
       if (isActive && isMe) {
-        html += '<button class="pdice-btn" id="pdice-btn-' + i + '">Roll 🎲</button>';
+        html += '<button class="pp-roll-btn" id="pdice-btn-' + i + '" style="background:' + p.color + '">Roll 🎲</button>';
       } else if (isActive) {
-        html += '<div class="pdice-pos" style="color:' + p.color + '">Rolling...</div>';
+        html += '<div class="pp-waiting" style="color:' + p.color + '">Rolling...</div>';
       }
 
       html += '</div>';
     }
-    row.innerHTML = html;
+    container.innerHTML = html;
 
-    // Bind the roll button if it's my turn
     for (var j = 0; j < state.players.length; j++) {
       var btn = document.getElementById('pdice-btn-' + j);
       if (btn) {
@@ -748,6 +789,29 @@
         btn.addEventListener('click', handleDiceClick);
       }
     }
+  }
+
+  /** Generate all 6 cube face divs */
+  function _cubeFacesHtml() {
+    var html = '';
+    for (var f = 1; f <= 6; f++) {
+      html += '<div class="dice-face-3d dice-face-' + f + '"><div class="dice-dots">' +
+        _dotsHtml(f) + '</div></div>';
+    }
+    return html;
+  }
+
+  /** CSS transform to show a specific face value */
+  var FACE_ROTATIONS = {
+    1: 'rotateX(0deg) rotateY(0deg)',
+    2: 'rotateX(0deg) rotateY(-90deg)',
+    3: 'rotateX(-90deg) rotateY(0deg)',
+    4: 'rotateX(90deg) rotateY(0deg)',
+    5: 'rotateX(0deg) rotateY(90deg)',
+    6: 'rotateX(0deg) rotateY(180deg)',
+  };
+  function _cubeTransform(val) {
+    return 'transform: ' + (FACE_ROTATIONS[val] || FACE_ROTATIONS[1]) + ';';
   }
 
   function _dotsHtml(value) {
@@ -775,24 +839,24 @@
   }
 
   function animatePlayerDice(playerIdx, finalValue, cb) {
-    var face = document.getElementById('pdice-face-' + playerIdx);
-    var inner = document.getElementById('pdice-inner-' + playerIdx);
-    if (!face || !inner) { if (cb) cb(); return; }
+    var cube = document.getElementById('dice-cube-' + playerIdx);
+    if (!cube) { if (cb) cb(); return; }
 
-    face.classList.remove('landed');
-    face.classList.add('rolling');
-    var ticks = 0;
-    var interval = setInterval(function () {
-      inner.innerHTML = _dotsHtml(Math.floor(Math.random() * 6) + 1);
-      ticks++;
-      if (ticks >= 10) {
-        clearInterval(interval);
-        inner.innerHTML = _dotsHtml(finalValue);
-        face.classList.remove('rolling');
-        face.classList.add('landed');
-        setTimeout(function () { if (cb) cb(); }, 300);
-      }
-    }, 60);
+    // Add rolling class for 1 second tumble
+    cube.classList.add('dice-rolling');
+    cube.style.transform = '';
+
+    // After 1 second, stop and show result face
+    setTimeout(function () {
+      cube.classList.remove('dice-rolling');
+      cube.style.transition = 'transform 0.4s cubic-bezier(0.2,0.8,0.3,1.2)';
+      cube.style.transform = FACE_ROTATIONS[finalValue] || FACE_ROTATIONS[1];
+      // Wait for settle transition
+      setTimeout(function () {
+        cube.style.transition = '';
+        if (cb) cb();
+      }, 450);
+    }, 1000);
   }
 
   /* ══════════════════════════════════════
@@ -817,6 +881,7 @@
     var p = state.players[state.currentPlayerIdx];
     el.style.borderColor = p.color + '80';
     el.style.boxShadow = '0 0 20px ' + p.color + '30';
+    el.style.setProperty('--turn-color', p.color + '40');
     var isMe = (state.currentPlayerIdx === myPlayerIdx);
     var label = isMe ? 'Your' : (p.colorName + "'s");
     el.innerHTML =
