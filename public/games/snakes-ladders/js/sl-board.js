@@ -24,11 +24,15 @@ var SLBoard = (function () {
 
   function _resize() {
     // Account for sidebar (300px) + padding/gaps (~40px)
-    var sidebar = document.querySelector('.sidebar');
-    var sidebarW = sidebar ? sidebar.offsetWidth + 40 : 40;
-    var availW = window.innerWidth - sidebarW;
-    var availH = window.innerHeight - 160; // header + turn banner + padding
-    var maxW = Math.min(availW, availH, 800);
+    var leftSidebar = document.querySelector('.sidebar');
+    var rightCol = document.getElementById('rightcol');
+    var headerEl = document.querySelector('.header.game-header');
+    var leftW = leftSidebar ? leftSidebar.offsetWidth + 24 : 24;
+    var rightW = rightCol ? rightCol.offsetWidth + 24 : 24;
+    var headerH = headerEl ? headerEl.offsetHeight + 20 : 88; // account for header height
+    var availW = window.innerWidth - leftW - rightW - 48; // margins
+    var availH = window.innerHeight - headerH - 140; // leave room for header and controls
+    var maxW = Math.min(availW, availH, 900);
     maxW = Math.max(maxW, 200); // minimum size
     cellPx = Math.floor(maxW / COLS);
     boardPx = cellPx * COLS;
@@ -227,17 +231,51 @@ var SLBoard = (function () {
       var c = sqToCell(pu.sq);
       var x = c.col * cellPx, y = c.row * cellPx;
 
-      // Tinted background
-      ctx.fillStyle = POWERUP_COLORS[pu.type] || 'rgba(255,255,255,0.1)';
-      _roundRect(x + 2, y + 2, cellPx - 4, cellPx - 4, 4);
-      ctx.fill();
+      // Icon position (bottom-right corner inset)
+      var iconSize = Math.max(12, Math.floor(cellPx * 0.28));
+      var ix = x + cellPx - iconSize - 6;
+      var iy = y + cellPx - iconSize - 6;
 
-      // Icon in bottom-right corner
-      var iconSize = cellPx * 0.32;
+      // Draw a small halo circle behind the icon
+      var color = (pu.type === 'shield') ? 'rgba(77,157,224,0.24)'
+        : (pu.type === 'double') ? 'rgba(245,197,66,0.24)'
+        : (pu.type === 'reroll') ? 'rgba(14,173,105,0.24)'
+        : 'rgba(255,255,255,0.16)';
+
+      // halo radial gradient
+      var hg = ctx.createRadialGradient(ix + iconSize/2, iy + iconSize/2, 1, ix + iconSize/2, iy + iconSize/2, iconSize);
+      hg.addColorStop(0, color);
+      hg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save();
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(ix + iconSize/2, iy + iconSize/2, iconSize/1.6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // subtle border circle with slight shadow to pop
+      ctx.save();
+      ctx.shadowColor = (pu.type === 'shield') ? 'rgba(77,157,224,0.18)'
+        : (pu.type === 'double') ? 'rgba(245,197,66,0.18)'
+        : (pu.type === 'reroll') ? 'rgba(14,173,105,0.18)'
+        : 'rgba(255,255,255,0.08)';
+      ctx.shadowBlur = 6;
+      ctx.strokeStyle = (pu.type === 'shield') ? 'rgba(77,157,224,0.6)'
+        : (pu.type === 'double') ? 'rgba(245,197,66,0.6)'
+        : (pu.type === 'reroll') ? 'rgba(14,173,105,0.6)'
+        : 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(ix + iconSize/2, iy + iconSize/2, iconSize/2.2, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Icon centered inside circle
       ctx.font = iconSize + 'px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(POWERUP_ICONS[pu.type] || '?', x + cellPx - 3, y + cellPx - 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(POWERUP_ICONS[pu.type] || '?', ix + iconSize/2, iy + iconSize/2 + 1);
     }
     // Reset alignment
     ctx.textAlign = 'center';
@@ -291,24 +329,55 @@ var SLBoard = (function () {
       var off = stacked[key]; stacked[key]++;
       var offX = (off % 2) * cellPx * 0.2 - cellPx * 0.1;
       var offY = Math.floor(off / 2) * cellPx * 0.2 - cellPx * 0.1;
-
-      _drawPawn(px + offX, py + offY, p.color, i + 1, state.currentPlayerIdx === i);
+ 
+      // Slight nudge away from snake/ladder path if this square is a start/end
+      var extraX = 0, extraY = 0;
+      try {
+        var slList = [];
+        if (state.snakes) slList = slList.concat(state.snakes);
+        if (state.ladders) slList = slList.concat(state.ladders);
+        for (var sIdx = 0; sIdx < slList.length; sIdx++) {
+          var sl = slList[sIdx];
+          var other = null;
+          if (sl.start === p.position) other = sl.end;
+          else if (sl.end === p.position) other = sl.start;
+          if (other) {
+            var center = sqToPixel(p.position);
+            var otherP = sqToPixel(other);
+            var vx = center.x - otherP.x, vy = center.y - otherP.y;
+            var vlen = Math.sqrt(vx*vx + vy*vy) || 1;
+            vx /= vlen; vy /= vlen;
+            var mag = cellPx * 0.12; // nudge magnitude
+            extraX += vx * mag; extraY += vy * mag;
+            // only nudge once per matching sl
+            break;
+          }
+        }
+      } catch (e) { /* swallow */ }
+ 
+      // pass avatar id (if any) instead of numeric label
+      var label = p.avatar ? p.avatar : (i + 1).toString();
+      _drawPawn(px + offX + extraX, py + offY + extraY, p.color, label, state.currentPlayerIdx === i);
     }
   }
 
-  function _drawPawn(cx, cy, color, num, active) {
+  function _drawPawn(cx, cy, color, avatarOrNum, active) {
     var rad = cellPx * 0.28;
     ctx.save();
 
+    // Soft opaque mask behind pawn to prevent snake/ladder strokes cutting through
+    ctx.beginPath(); ctx.arc(cx, cy, rad + 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fill();
+
     // Shadow
     ctx.beginPath(); ctx.arc(cx + 1.5, cy + 2.5, rad, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fill();
 
     // Active glow
     if (active) {
-      ctx.beginPath(); ctx.arc(cx, cy, rad + 4, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(cx, cy, rad + 6, 0, Math.PI * 2);
       ctx.fillStyle = color + '40'; ctx.fill();
-      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.6;
       ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
     }
 
@@ -322,16 +391,12 @@ var SLBoard = (function () {
     ctx.fillStyle = grad; ctx.fill();
 
     // Rim + shine
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(cx, cy, rad - 1, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx - rad * 0.2, cy - rad * 0.25, rad * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.fill();
 
-    // Number
-    ctx.fillStyle = '#fff';
-    ctx.font = '800 ' + (cellPx * 0.24) + 'px Nunito, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(num, cx, cy + 1);
+    // Do not render avatar emoji inside the pawn — keep tokens clean
     ctx.restore();
   }
 

@@ -153,6 +153,8 @@ function registerSocketHandlers(io, socket, roomManager) {
     room.phase = 'playing';
     broadcastRoomUpdate(room);
     io.to(room.code).emit('sl:game-started');
+    // Notify clients of new randomized power-up positions for verification
+    io.to(room.code).emit('sl:powerups', room.gameState.powerups);
     broadcastGameState(room);
     if (ack) ack({ ok: true, code: room.code });
     // If AI goes first, auto-roll
@@ -183,6 +185,8 @@ function registerSocketHandlers(io, socket, roomManager) {
     if (ack) ack({ ok: true });
 
     io.to(room.code).emit('sl:game-started');
+    // Notify clients of new randomized power-up positions for verification
+    io.to(room.code).emit('sl:powerups', room.gameState.powerups);
     broadcastGameState(room);
 
     // If first player is AI, auto-roll

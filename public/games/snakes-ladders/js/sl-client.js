@@ -542,6 +542,17 @@
     setTimeout(function () { renderPlayerFaces(); }, 300);
   });
 
+  // Receive randomized power-up positions for verification (emitted at game start)
+  socket.on('sl:powerups', function (powerups) {
+    try {
+      console.log('SL powerups:', powerups);
+      if (powerups && powerups.length) {
+        var txt = powerups.map(function(p) { return p.sq + '(' + p.type + ')'; }).join(', ');
+        addLog('Power-ups placed: ' + txt, '#889', 'info');
+      }
+    } catch (e) { console.warn(e); }
+  });
+
   /* ── Exit / Restart buttons ── */
   document.getElementById('btn-exit-game').addEventListener('click', function () {
     if (confirm('Leave this game?')) {
@@ -723,18 +734,16 @@
 
   function renderPlayerDice(state) {
     if (!state || !state.players) return;
-    var container = document.getElementById('player-panels');
+    // Render compact player badges in the right column (right-panels)
+    var container = document.getElementById('right-panels') || document.getElementById('player-panels');
     if (!container) return;
     var html = '';
     for (var i = 0; i < state.players.length; i++) {
       var p = state.players[i];
       var isActive = state.currentPlayerIdx === i && state.phase === 'playing';
-      var isMe = i === myPlayerIdx;
-      var lastVal = playerLastRoll[i] || 1;
       var finished = state.finished && state.finished.indexOf(i) >= 0;
       var inv = state.inventory && state.inventory[i] ? state.inventory[i] : { shield: 0, double: 0, reroll: 0 };
 
-      // Avatar info
       var av = p.isAI ? null : getAvatar(p.avatar || 'smiley');
       var neutralEmoji = p.isAI ? FACE_AI_NEUTRAL : (av ? av.neutral : FACE_NEUTRAL);
 
@@ -743,7 +752,6 @@
         ' style="--pp-color:' + p.color + ';--pp-bg:' + p.color + '15;--pp-border:' + p.color +
         ';--pface-color:' + p.color + ';--pface-glow:' + p.color + '44">' +
 
-        // Avatar row: emoji + name + badge
         '<div class="pp-avatar-row">' +
         '<div class="pface-emoji" id="pface-emoji-' + i + '">' + neutralEmoji + '</div>' +
         '<div class="pp-info">' +
@@ -754,40 +762,41 @@
         '<div class="pface-bubble" id="pface-bubble-' + i + '"></div>' +
         '</div>' +
 
+        // compact body: just position and power counts (no dice cube)
         '<div class="pp-body">' +
-
-        '<div class="pp-dice-area">' +
-        '<div class="dice-scene" id="dice-scene-' + i + '">' +
-        '<div class="dice-cube" id="dice-cube-' + i + '" style="' + _cubeTransform(lastVal) + '">' +
-        _cubeFacesHtml() +
-        '</div></div>' +
         '<div class="pp-sq">Sq ' + (p.position || 0) + '</div>' +
-        '</div>' +
-
         '<div class="pp-powers">' +
         '<div class="pp-pw"><span class="pp-pw-icon">🛡️</span><span class="pp-pw-ct">' + inv.shield + '</span></div>' +
         '<div class="pp-pw"><span class="pp-pw-icon">⚡</span><span class="pp-pw-ct">' + inv.double + '</span></div>' +
         '<div class="pp-pw"><span class="pp-pw-icon">🎲</span><span class="pp-pw-ct">' + inv.reroll + '</span></div>' +
         '</div>' +
-
+        '</div>' +
         '</div>';
-
-      if (isActive && isMe) {
-        html += '<button class="pp-roll-btn" id="pdice-btn-' + i + '" style="background:' + p.color + '">Roll 🎲</button>';
-      } else if (isActive) {
-        html += '<div class="pp-waiting" style="color:' + p.color + '">Rolling...</div>';
-      }
-
-      html += '</div>';
     }
     container.innerHTML = html;
 
-    for (var j = 0; j < state.players.length; j++) {
-      var btn = document.getElementById('pdice-btn-' + j);
-      if (btn) {
-        btn.disabled = isRolling || isAnimatingMove;
-        btn.addEventListener('click', handleDiceClick);
-      }
+    // Render the single global dice and roll button beneath the board
+    renderGlobalDice(state);
+  }
+
+  function renderGlobalDice(state) {
+    var wrap = document.getElementById('global-controls');
+    if (!wrap) return;
+    // Ensure dice faces are present
+    var cube = document.getElementById('global-dice-cube');
+    if (cube && cube.children.length === 0) cube.innerHTML = _cubeFacesHtml();
+
+    var btn = document.getElementById('global-roll-btn');
+    if (!btn) return;
+    var isMeTurn = state && state.currentPlayerIdx === myPlayerIdx && state.phase === 'playing';
+    if (isMeTurn) {
+      btn.style.display = '';
+      btn.disabled = isRolling || isAnimatingMove;
+      btn.onclick = function () { handleDiceClick(); };
+    } else {
+      // show waiting state visually
+      btn.style.display = isRolling || isAnimatingMove ? '' : 'none';
+      btn.disabled = true;
     }
   }
 
@@ -825,8 +834,8 @@
     if (isRolling || isAnimatingMove) return;
     if (!gameState || gameState.currentPlayerIdx !== myPlayerIdx) return;
     isRolling = true;
-    // Disable button immediately
-    var btn = document.getElementById('pdice-btn-' + myPlayerIdx);
+    // Disable global roll button immediately
+    var btn = document.getElementById('global-roll-btn');
     if (btn) btn.disabled = true;
 
     socket.emit('sl:roll-dice', null, function (res) {
@@ -839,7 +848,8 @@
   }
 
   function animatePlayerDice(playerIdx, finalValue, cb) {
-    var cube = document.getElementById('dice-cube-' + playerIdx);
+    // Use the global dice cube when present
+    var cube = document.getElementById('global-dice-cube') || document.getElementById('dice-cube-' + playerIdx);
     if (!cube) { if (cb) cb(); return; }
 
     // Add rolling class for 1 second tumble

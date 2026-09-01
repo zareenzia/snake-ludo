@@ -74,9 +74,36 @@ class SLGameEngine {
       [order[i], order[j]] = [order[j], order[i]];
     }
 
-    // Build power-up map: sq → type (only for uncollected ones)
+    // Randomize power-up placement per new game
+    const counts = { shield: 7, double: 5, reroll: 5 };
+    // Build exclusion set: snake/ladder starts and ends, plus 1 and 100
+    const excluded = new Set([1, 100]);
+    DEFAULT_SNAKES.forEach(s => { excluded.add(s.start); excluded.add(s.end); });
+    DEFAULT_LADDERS.forEach(l => { excluded.add(l.start); excluded.add(l.end); });
+
+    // Collect allowed squares (2..99 excluding excluded and occupied)
+    const allowed = [];
+    for (let sq = 2; sq <= 99; sq++) {
+      if (!excluded.has(sq)) allowed.push(sq);
+    }
+
+    // Shuffle allowed squares using crypto RNG
+    for (let i = allowed.length - 1; i > 0; i--) {
+      const j = crypto.randomInt(i + 1);
+      [allowed[i], allowed[j]] = [allowed[j], allowed[i]];
+    }
+
+    const powerups = [];
+    let idx = 0;
+    ['shield','double','reroll'].forEach(type => {
+      for (let k = 0; k < counts[type]; k++) {
+        if (idx >= allowed.length) break;
+        powerups.push({ sq: allowed[idx++], type });
+      }
+    });
+
     const powerupMap = {};
-    DEFAULT_POWERUPS.forEach(pu => { powerupMap[pu.sq] = pu.type; });
+    powerups.forEach(pu => { powerupMap[pu.sq] = pu.type; });
 
     return {
       turnOrder: order,
@@ -85,7 +112,7 @@ class SLGameEngine {
       snakes: DEFAULT_SNAKES,
       ladders: DEFAULT_LADDERS,
       snakeLadderMap,
-      powerups: DEFAULT_POWERUPS.map(pu => ({ ...pu })),  // remaining on board
+      powerups: powerups,  // remaining on board
       powerupMap,
       // Each player's collected power-ups
       inventory: players.map(() => ({ shield: 0, double: 0, reroll: 0 })),

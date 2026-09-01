@@ -87,7 +87,7 @@
       <div id="player-panels" class="player-panels"></div>
     </div>
 
-    <!-- Header: actions only (avatars moved into player panels) -->
+    <!-- Header: turn indicator + player badges on the right -->
     <div class="header game-header">
       <div id="sl-turn-indicator" class="turn-indicator"></div>
       <div class="game-actions">
@@ -99,6 +99,22 @@
     <!-- Board -->
     <div class="board-wrap" id="sl-board-wrap">
       <canvas id="sl-canvas"></canvas>
+      <!-- Global controls: single dice + roll button under the board -->
+      <div id="global-controls" class="global-controls">
+        <div class="dice-scene" id="global-dice-scene">
+          <div class="dice-cube" id="global-dice-cube" style="transform: rotateX(0deg) rotateY(0deg);">
+            <!-- faces inserted by JS or duplicated via _cubeFacesHtml -->
+          </div>
+        </div>
+        <button id="global-roll-btn" class="pp-roll-btn btn btn-primary">Roll 🎲</button>
+      </div>
+    </div>
+
+    <!-- Right column for player panels -->
+    <div class="rightcol" id="rightcol">
+      <div id="right-panels" class="right-panels">
+        <div id="player-panels" class="player-panels"></div>
+      </div>
     </div>
 
     <!-- Hidden container for JS to find player-faces (rendered inside pp-blocks now) -->

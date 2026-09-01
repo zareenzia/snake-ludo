@@ -79,21 +79,8 @@
     }
     .split-container.split .game-frame { opacity: 1; }
 
-    /* Back button */
-    .game-back-btn {
-      position: absolute; top: 12px; left: 12px; z-index: 50;
-      background: rgba(20,20,40,0.9); color: #ccd;
-      border: 1px solid rgba(255,255,255,0.1);
-      padding: 7px 16px; border-radius: 10px; font-family: 'Nunito', sans-serif;
-      font-weight: 700; font-size: 0.82rem; cursor: pointer;
-      transition: all 0.2s; backdrop-filter: blur(10px);
-      opacity: 0; pointer-events: none;
-      transform: translateX(-20px);
-      transition: all 0.3s 0.4s;
-    }
-    .split-container.split .game-back-btn {
-      opacity: 1; pointer-events: all; transform: translateX(0);
-    }
+    /* Back button (hidden per layout requirement) */
+    .game-back-btn { display: none !important; }
     .game-back-btn:hover { background: rgba(50,50,80,0.95); color: #fff; }
 
     /* Loading spinner — animated snake */
