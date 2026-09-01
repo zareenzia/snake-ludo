@@ -36,6 +36,7 @@ function registerSocketHandlers(io, socket, roomManager) {
         ready: p.ready,
         connected: p.connected,
         isAI: !!p.isAI,
+        avatar: p.avatar || (p.isAI ? 'robot' : 'smiley'),
       })),
     };
     io.to(room.code).emit('sl:room-update', data);
@@ -51,10 +52,10 @@ function registerSocketHandlers(io, socket, roomManager) {
   // ── Create room ──
   socket.on('sl:create-room', (data, ack) => {
     const room = roomManager.createRoom(socket.id, data.name || 'Host');
-    // Apply preferred color if provided
-    if (data.color) {
-      roomManager.changeColor(room.code, socket.id, data.color);
-    }
+    if (data.color) roomManager.changeColor(room.code, socket.id, data.color);
+    // Set avatar
+    const player = room.players.find(p => p.id === socket.id);
+    if (player && data.avatar) player.avatar = data.avatar;
     socket.join(room.code);
     currentRoomCode = room.code;
     if (ack) ack({ ok: true, code: room.code });
@@ -70,6 +71,8 @@ function registerSocketHandlers(io, socket, roomManager) {
       return;
     }
     if (data.color) roomManager.changeColor(code, socket.id, data.color);
+    const player = room.players.find(p => p.id === socket.id);
+    if (player && data.avatar) player.avatar = data.avatar;
     socket.join(code);
     currentRoomCode = code;
     if (ack) ack({ ok: true, code });
@@ -137,6 +140,9 @@ function registerSocketHandlers(io, socket, roomManager) {
     const room = roomManager.createRoom(socket.id, name);
     if (!room) { if (ack) ack({ ok: false, error: 'Failed to create room.' }); return; }
     if (playerColor) roomManager.changeColor(room.code, socket.id, playerColor);
+    // Set player avatar
+    const player = room.players.find(p => p.id === socket.id);
+    if (player && data.avatar) player.avatar = data.avatar;
     currentRoomCode = room.code;
     socket.join(room.code);
     // Add AI opponent
@@ -191,7 +197,8 @@ function registerSocketHandlers(io, socket, roomManager) {
     const player = room.players[currentIdx];
     if (!player || !player.isAI) return;
 
-    // Delay for visual effect (let clients animate previous move)
+    // Delay long enough for client animations to finish
+    // (dice ~600ms + up to 6 steps × 400ms + snake/ladder 600ms ≈ 3600ms)
     setTimeout(() => {
       if (!room.gameState || room.gameState.phase !== 'playing') return;
       const checkIdx = SLGameEngine.currentPlayerIndex(room.gameState);
@@ -216,7 +223,7 @@ function registerSocketHandlers(io, socket, roomManager) {
         // Chain: if the next player is also AI (or same AI got extra turn)
         scheduleAIRoll(room);
       }
-    }, 1500);
+    }, 4000);
   }
 
   // ── Roll dice ──
@@ -252,7 +259,7 @@ function registerSocketHandlers(io, socket, roomManager) {
     // Broadcast roll result to all clients
     io.to(room.code).emit('sl:roll-result', result);
 
-    // Broadcast updated state
+    // Broadcast updated state immediately (client guards against animation conflicts)
     broadcastGameState(room);
 
     // Check game over

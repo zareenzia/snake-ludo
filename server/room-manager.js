@@ -70,7 +70,7 @@ class RoomManager {
       connected: true,
       position: 0,
       isAI: !!isAI,
-      avatar: isAI ? 'robot' : (avatar || 'boy'),
+      avatar: isAI ? 'robot' : (avatar || 'smiley'),
     });
   }
 

@@ -24,7 +24,7 @@ const Board = (() => {
   }
 
   function _resize() {
-    const maxW = Math.min(window.innerWidth - 24, 680);
+    const maxW = Math.min(window.innerWidth - 24, window.innerHeight - 200, 680);
     cellPx = Math.floor(maxW / BOARD_SIZE);
     canvas.width  = cellPx * BOARD_SIZE;
     canvas.height = cellPx * BOARD_SIZE;

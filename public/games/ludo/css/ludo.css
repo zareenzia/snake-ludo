@@ -4,13 +4,13 @@ body {
   font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif;
   background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
   color: #eee;
-  display: flex; justify-content: center; align-items: center;
+  display: flex; justify-content: center; align-items: flex-start;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: hidden; overflow-y: auto;
 }
 
 /* ========== SCREENS ========== */
-.screen { text-align: center; width: 100%; max-width: 720px; padding: 16px; }
+.screen { text-align: center; width: 100%; max-width: 720px; padding: 16px; margin: 0 auto; }
 .hidden { display: none !important; }
 
 /* ========== SETUP SCREEN ========== */
@@ -249,9 +249,29 @@ h1 {
 #victory-screen h1 { font-size: 2.2rem; margin-bottom: 8px; }
 .victory-sub { color: #aab; font-weight: 600; margin-bottom: 24px; }
 
+/* ========== FLUID TYPOGRAPHY ========== */
+h1 { font-size: clamp(1.4rem, 4.5vw, 2.6rem); }
+.subtitle { font-size: clamp(0.8rem, 1.8vw, 1rem); }
+.logo-dice { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+
+/* ========== TOUCH TARGETS ========== */
+.btn { min-height: 44px; min-width: 44px; }
+.btn-dice { min-height: 44px; }
+
 /* ========== RESPONSIVE ========== */
-@media (max-width: 520px) {
-  h1 { font-size: 1.8rem; }
+
+@media (max-width: 1024px) {
+  #board-container { max-width: 90vw; }
+}
+
+@media (max-width: 768px) {
+  #board-container { max-width: 95vw; }
+  #controls { flex-direction: column; align-items: center; gap: 8px; }
+  .setup-form { max-width: 90vw; }
+  .victory-content { padding: 32px 24px; }
+}
+
+@media (max-width: 480px) {
   .btn-primary { padding: 12px 26px; font-size: 1rem; }
   .btn-dice { padding: 8px 20px; font-size: 0.85rem; }
   #dice-face { width: 60px; height: 60px; }
@@ -260,4 +280,35 @@ h1 {
   #turn-indicator { font-size: 0.9rem; padding: 6px 16px; }
   .setup-form { padding: 20px 16px; }
   .toast { font-size: 0.8rem; padding: 8px 14px; }
+  #board-container { max-width: 100vw; border-radius: 12px; }
+  #message-area { font-size: 0.82rem; }
+  .victory-content { padding: 28px 16px; border-radius: 20px; }
+  #victory-screen h1 { font-size: 1.6rem; }
+  .trophy { font-size: 3.5rem; }
+}
+
+@media (max-width: 380px) {
+  .btn-primary { padding: 10px 20px; font-size: 0.9rem; }
+  #dice-face { width: 50px; height: 50px; }
+  .dice-inner { width: 36px; height: 36px; }
+  .dice-inner .dot { width: 8px; height: 8px; }
+  .setup-form { padding: 16px 12px; }
+  .form-label { font-size: 0.85rem; }
+  select { font-size: 0.85rem; }
+  #turn-indicator { font-size: 0.8rem; padding: 5px 12px; }
+}
+
+/* ── Landscape on mobile ── */
+@media (max-height: 500px) and (orientation: landscape) {
+  body { align-items: flex-start; }
+  .screen { padding: 8px; }
+  .logo-area { margin-bottom: 8px; }
+  #board-container { max-width: min(95vw, 80vh); }
+  #turn-indicator { padding: 4px 12px; font-size: 0.8rem; min-height: 36px; }
+  #dice-face { width: 48px; height: 48px; }
+  .dice-inner { width: 34px; height: 34px; }
+  .dice-inner .dot { width: 8px; height: 8px; }
+  .setup-form { padding: 14px 12px; gap: 8px; }
+  .victory-content { padding: 20px 16px; }
+  .trophy { font-size: 2.5rem; }
 }

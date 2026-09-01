@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Game Hub — Snake-Ludo</title>
+  <title>Roll & Rumble 🐍🎲</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" />
@@ -13,7 +13,14 @@
   <link rel="prefetch" href="/games/snakes-ladders/sl.html" />
   <link rel="prefetch" href="/socket.io/socket.io.js" />
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body { overflow: hidden; }
+
+    /* Hub panel scrolls its own content */
+    .hub-panel {
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 10px 0;
+    }
 
     /* ── Animated background ── */
     .bg-particles {
@@ -40,7 +47,7 @@
     /* Left: Hub panel */
     .hub-panel {
       width: 100%; min-width: 0; height: 100%;
-      display: flex; justify-content: center; align-items: center;
+      display: flex; justify-content: center; align-items: flex-start;
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
                   min-width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
       overflow-y: auto; overflow-x: hidden;
@@ -126,14 +133,19 @@
     .split-container.split .card-title { font-size: 1rem; }
     .split-container.split .card-desc { font-size: 0.72rem; }
 
-    /* Mobile: stack vertically */
+    /* Mobile: stack vertically, game takes full screen */
     @media (max-width: 768px) {
       .split-container { flex-direction: column; }
-      .split-container.split .hub-panel { width: 100%; min-width: 0; height: 45%; }
-      .split-container.split .game-panel { width: 100%; height: 55%; }
+      .split-container.split .hub-panel { width: 100%; min-width: 0; height: 0; overflow: hidden; padding: 0; }
+      .split-container.split .game-panel { width: 100%; height: 100%; }
       .game-panel { border-left: none; border-top: 2px solid transparent; }
       .split-container.split .game-panel { border-top-color: rgba(255,255,255,0.06); }
       .split-container.split .game-panel::before { display: none; }
+      .game-back-btn { font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; }
+      .hub-panel { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    }
+    @media (max-width: 520px) {
+      .split-container.split .hub-panel { height: 0; }
     }
   </style>
 </head>
@@ -147,7 +159,7 @@
       <div class="hub-container">
         <div class="hub-header">
           <div class="hub-logo">🎲</div>
-          <h1 class="hub-title">Game Hub</h1>
+          <h1 class="hub-title">Roll & Rumble</h1>
           <p class="hub-subtitle">Choose your game</p>
           <div class="hub-profile-bar" id="hub-profile">
             <span class="hub-level" id="hub-level">Lvl 1</span>

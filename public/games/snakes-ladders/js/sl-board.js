@@ -9,6 +9,7 @@ var SLBoard = (function () {
   var ROWS = 10, COLS = 10;
   var _animations = [];
   var _gameState = null;
+  var _animatingPlayers = {};  // playerIdx → true while animating
 
   var PLAYER_COLORS_LIGHT = {
     '#e94560': '#ffb3c1', '#0ead69': '#a8f0c6',
@@ -22,7 +23,7 @@ var SLBoard = (function () {
   }
 
   function _resize() {
-    var maxW = Math.min(window.innerWidth - 24, 560);
+    var maxW = Math.min(window.innerWidth - 24, window.innerHeight - 280, 560);
     cellPx = Math.floor(maxW / COLS);
     boardPx = cellPx * COLS;
     canvas.width = boardPx;
@@ -187,6 +188,10 @@ var SLBoard = (function () {
     ctx.restore();
   }
 
+  /* Track where each player visually is during step-by-step animation */
+  var _visualPositions = {};
+  var _pixelAnimations = {};  // playerIdx → {x, y} for pixel-based animation (snake/ladder)
+
   /* ── Tokens ── */
   function _drawTokens(state) {
     if (!state || !state.players) return;
@@ -194,23 +199,32 @@ var SLBoard = (function () {
 
     for (var i = 0; i < state.players.length; i++) {
       var p = state.players[i];
-      if (p.position <= 0) continue; // off-board
 
       // Check animation
-      var animKey = i;
       var anim = null;
       for (var a = 0; a < _animations.length; a++) {
-        if (_animations[a].playerIdx === animKey) { anim = _animations[a]; break; }
+        if (_animations[a].playerIdx === i) { anim = _animations[a]; break; }
       }
 
       var px, py;
-      if (anim) {
-        var t = _easeOutBack(anim.progress);
+      if (_pixelAnimations[i]) {
+        // Pixel-based animation (following snake/ladder curve)
+        px = _pixelAnimations[i].x;
+        py = _pixelAnimations[i].y;
+      } else if (anim) {
+        // Actively sliding between two squares
+        var t = _easeOutCubic(anim.progress);
         var from = sqToPixel(anim.fromSq || 1);
         var to = sqToPixel(anim.toSq || 1);
         px = from.x + (to.x - from.x) * t;
         py = from.y + (to.y - from.y) * t;
+      } else if (_visualPositions[i] !== undefined && _visualPositions[i] > 0) {
+        // Paused at intermediate square during step-by-step animation
+        var vpos = sqToPixel(_visualPositions[i]);
+        px = vpos.x; py = vpos.y;
       } else {
+        // No animation — use server position
+        if (p.position <= 0) continue;
         var pos = sqToPixel(p.position);
         px = pos.x; py = pos.y;
       }
@@ -278,6 +292,10 @@ var SLBoard = (function () {
       var SLIDE_MS = 150;  // time to slide between squares
       var PAUSE_MS = 250;  // pause at each square
 
+      // Lock visual position so _drawTokens doesn't jump to server position
+      _visualPositions[playerIdx] = fromSq;
+      _animatingPlayers[playerIdx] = true;
+
       function doStep() {
         currentStep++;
         var targetSq = fromSq + currentStep * direction;
@@ -294,16 +312,18 @@ var SLBoard = (function () {
           if (anim.progress < 1) {
             requestAnimationFrame(tick);
           } else {
+            // Remove slide animation, update visual position
             _animations = _animations.filter(function (a) { return a !== anim; });
-            // Temporarily set player position for drawing during pause
-            anim.progress = 1;
+            _visualPositions[playerIdx] = targetSq;
             draw(_gameState);
 
             if (currentStep < steps) {
               // Pause at this square, then continue
               setTimeout(doStep, PAUSE_MS);
             } else {
-              // Done — final square
+              // Done — release visual lock
+              delete _visualPositions[playerIdx];
+              delete _animatingPlayers[playerIdx];
               draw(_gameState);
               resolve();
             }
@@ -314,6 +334,111 @@ var SLBoard = (function () {
 
       doStep();
     });
+  }
+
+  /**
+   * Animate token along a snake or ladder curve (follows the drawn path).
+   * For ladders: straight line along the rails.
+   * For snakes: S-curve matching the drawn bezier.
+   */
+  function animateSnakeLadder(playerIdx, fromSq, toSq, type) {
+    return new Promise(function (resolve) {
+      if (fromSq <= 0 || toSq <= 0 || fromSq === toSq) { resolve(); return; }
+
+      _animatingPlayers[playerIdx] = true;
+      _visualPositions[playerIdx] = fromSq;
+
+      var p1 = sqToPixel(fromSq);
+      var p2 = sqToPixel(toSq);
+      var DURATION = 600; // ms for the full slide
+
+      // Build the path points based on type
+      // Snake: S-curve with same control points as _drawSnakeCurve
+      // Ladder: straight line (same as the rail)
+      var isSnake = (type === 'snake');
+
+      // Snake curve control points (matching _drawSnakeCurve)
+      var dx = p2.x - p1.x, dy = p2.y - p1.y;
+      var len = Math.sqrt(dx * dx + dy * dy);
+      var nx = -dy / len * cellPx * 0.9;
+      var ny = dx / len * cellPx * 0.9;
+      var mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+
+      // Sample points along path for smooth interpolation
+      function getPointAtT(t) {
+        if (!isSnake) {
+          // Ladder: straight line
+          return {
+            x: p1.x + (p2.x - p1.x) * t,
+            y: p1.y + (p2.y - p1.y) * t
+          };
+        }
+        // Snake: two joined bezier segments (0→0.5 and 0.5→1)
+        if (t <= 0.5) {
+          var st = t * 2; // 0→1 within first half
+          return _cubicBezier(
+            p1.x, p1.y,
+            p1.x + nx, p1.y + ny,
+            mx - nx, my - ny,
+            mx, my,
+            st
+          );
+        } else {
+          var st = (t - 0.5) * 2; // 0→1 within second half
+          return _cubicBezier(
+            mx, my,
+            mx + nx, my + ny,
+            p2.x - nx, p2.y - ny,
+            p2.x, p2.y,
+            st
+          );
+        }
+      }
+
+      var start = performance.now();
+
+      function tick(now) {
+        var elapsed = now - start;
+        var progress = Math.min(1, elapsed / DURATION);
+        var eased = _easeInOutCubic(progress);
+
+        var pt = getPointAtT(eased);
+        _pixelAnimations[playerIdx] = { x: pt.x, y: pt.y };
+        draw(_gameState);
+
+        if (progress < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          // Done
+          delete _pixelAnimations[playerIdx];
+          delete _visualPositions[playerIdx];
+          delete _animatingPlayers[playerIdx];
+          draw(_gameState);
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(tick);
+    });
+  }
+
+  /** Evaluate cubic bezier at parameter t */
+  function _cubicBezier(x0, y0, x1, y1, x2, y2, x3, y3, t) {
+    var u = 1 - t;
+    var uu = u * u, uuu = uu * u;
+    var tt = t * t, ttt = tt * t;
+    return {
+      x: uuu * x0 + 3 * uu * t * x1 + 3 * u * tt * x2 + ttt * x3,
+      y: uuu * y0 + 3 * uu * t * y1 + 3 * u * tt * y2 + ttt * y3
+    };
+  }
+
+  function _easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function _easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
   }
 
   function _easeOutBack(t) {
@@ -344,5 +469,10 @@ var SLBoard = (function () {
     return { col: Math.floor(px / cellPx), row: Math.floor(py / cellPx) };
   }
 
-  return { init: init, draw: draw, animateToken: animateToken, sqToPixel: sqToPixel, getCellPx: function () { return cellPx; } };
+  function isAnimating() {
+    for (var k in _animatingPlayers) { return true; }
+    return false;
+  }
+
+  return { init: init, draw: draw, animateToken: animateToken, animateSnakeLadder: animateSnakeLadder, isAnimating: isAnimating, sqToPixel: sqToPixel, getCellPx: function () { return cellPx; } };
 })();

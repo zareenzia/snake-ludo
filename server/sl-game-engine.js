@@ -203,6 +203,7 @@ class SLGameEngine {
         connected: p.connected,
         position: gs.positions[i],
         isAI: !!p.isAI,
+        avatar: p.avatar || (p.isAI ? 'robot' : 'smiley'),
       })),
     };
   }

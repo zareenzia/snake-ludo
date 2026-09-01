@@ -4,11 +4,11 @@ body {
   font-family: 'Nunito', 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
   color: #eee; min-height: 100vh;
-  display: flex; justify-content: center; align-items: center;
-  overflow-x: hidden;
+  display: flex; justify-content: center; align-items: flex-start;
+  overflow-x: hidden; overflow-y: auto;
 }
 
-.screen { text-align: center; width: 100%; max-width: 960px; padding: 16px; }
+.screen { text-align: center; width: 100%; max-width: 960px; padding: 16px; margin: 0 auto; }
 .hidden { display: none !important; }
 
 /* ── Back link ── */
@@ -108,6 +108,10 @@ h1 {
 }
 .settings-nav-toggle:hover { background: rgba(40,40,70,0.95); color: #ffe066; transform: scale(1.05); }
 .settings-nav-toggle.active { background: rgba(245,197,66,0.15); border-color: rgba(245,197,66,0.4); }
+.nav-btn-row { display: flex; gap: 0; }
+.nav-btn-row .settings-nav-toggle { border-radius: 0 0 0 14px; }
+.nav-btn-row .settings-nav-toggle:first-child { border-radius: 0 0 0 14px; border-right: 1px solid rgba(255,255,255,0.06); }
+.nav-btn-row .settings-nav-toggle:last-child { border-radius: 0; }
 .settings-nav-panel {
   background: rgba(16,16,36,0.95); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 0 0 0 16px; padding: 16px 20px;
@@ -302,7 +306,7 @@ h1 {
 }
 
 /* ── Game center column ── */
-.game-center { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.game-center { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 100%; min-width: 0; flex: 1; }
 
 .game-top-bar {
   display: flex; align-items: center; gap: 12px; width: 100%;
@@ -558,19 +562,170 @@ h1 {
 .pface-emoji.anim-mock { animation: face-mock 1.2s ease-in-out; }
 .pface-emoji.anim-bounce { animation: face-bounce 0.8s ease-in-out; }
 
-@media (max-width: 720px) {
+/* ── Help modal ── */
+.help-modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  display: flex; justify-content: center; align-items: center;
+  animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.help-modal {
+  max-width: 520px; width: 92vw; max-height: 85vh;
+  overflow-y: auto; padding: 28px 24px 20px;
+  border-radius: 20px; position: relative;
+  background: rgba(16,16,36,0.97); border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: modalBounce 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modalBounce {
+  from { transform: scale(0.85) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.help-close {
+  position: absolute; top: 12px; right: 14px;
+  background: rgba(255,255,255,0.06); border: none; color: #889;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.help-close:hover { background: rgba(233,69,96,0.2); color: #e94560; }
+.help-title {
+  font-size: 1.5rem; font-weight: 900; margin-bottom: 18px;
+  background: linear-gradient(90deg, #f5c542, #e94560);
+  background-clip: text; -webkit-background-clip: text; color: transparent;
+}
+.help-section { margin-bottom: 16px; text-align: left; }
+.help-section h3 {
+  font-size: 0.95rem; font-weight: 800; color: #f5c542; margin-bottom: 6px;
+}
+.help-section ul {
+  list-style: none; padding: 0; margin: 0;
+}
+.help-section li {
+  font-size: 0.82rem; color: #bbc; line-height: 1.6;
+  padding: 3px 0 3px 18px; position: relative;
+}
+.help-section li::before {
+  content: '›'; position: absolute; left: 4px; color: #0ead69; font-weight: 800;
+}
+.help-section li strong { color: #eee; }
+.help-got-it {
+  margin-top: 10px; width: 100%;
+}
+
+/* ═══════ FLUID TYPOGRAPHY & SIZING ═══════ */
+h1 { font-size: clamp(1.3rem, 4vw, 2.2rem); }
+.subtitle { font-size: clamp(0.8rem, 1.8vw, 1rem); }
+.logo-icon { font-size: clamp(2.2rem, 6vw, 3.6rem); }
+
+/* ═══════ TOUCH TARGETS (min 44px) ═══════ */
+.btn { min-height: 44px; min-width: 44px; }
+.pdice-btn { min-height: 36px; min-width: 44px; }
+.color-swatch { min-width: 32px; min-height: 32px; }
+.emoji-option { min-width: 44px; min-height: 44px; }
+.settings-nav-toggle { min-height: 44px; }
+.help-close { min-width: 44px; min-height: 44px; }
+.btn-sm { min-height: 40px; min-width: 40px; }
+
+/* ═══════ RESPONSIVE BREAKPOINTS ═══════ */
+
+/* ── Large desktop (1024px+): no changes needed, base styles apply ── */
+
+/* ── Tablet / small laptop (768–1024px) ── */
+@media (max-width: 1024px) {
+  .game-layout { gap: 8px; }
+  .move-log-panel { width: 180px; min-width: 140px; max-height: 500px; }
+  .player-faces { gap: 16px; }
+  .pface { padding: 8px 12px 6px; }
+  .pface-emoji { font-size: 2.4rem; }
+}
+
+/* ── Small tablet / landscape phone (480–768px) ── */
+@media (max-width: 768px) {
   .game-layout { flex-direction: column; align-items: center; }
   .move-log-panel {
-    width: 100%; max-height: 160px; order: 2;
-    flex-direction: column;
+    width: 100%; max-height: 120px; order: 2;
+    flex-direction: column; min-width: 0;
   }
   .log-header { padding: 6px 12px; }
+  .game-center { width: 100%; }
+  .player-faces { gap: 12px; flex-wrap: wrap; min-height: auto; }
+  .pface { padding: 6px 10px 6px; }
+  .pface-emoji { font-size: 2rem; }
+  .pface-name { font-size: 0.6rem; }
+  .pface-badge { font-size: 0.48rem; }
+  .player-dice-row { flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .board-wrap { max-width: 95vw; margin: 0 auto; }
+  .game-top-bar { flex-wrap: wrap; gap: 6px; }
+  .turn-indicator { font-size: 0.85rem; padding: 6px 14px; }
+  .settings-nav-panel { min-width: 200px; }
+  .join-form { padding: 20px 16px; max-width: 90vw; }
+  .lobby-card { max-width: 90vw; padding: 20px 16px; }
+  .gameover-card { max-width: 90vw; padding: 24px 16px; }
+  .color-modal { max-width: 90vw; padding: 20px 16px; }
+  .glass-card { padding: 20px 16px; }
+  .help-modal { padding: 20px 16px 16px; }
+  .help-title { font-size: 1.2rem; }
+  .help-section h3 { font-size: 0.85rem; }
+  .help-section li { font-size: 0.75rem; }
 }
-@media (max-width: 520px) {
-  h1 { font-size: 1.6rem; }
+
+/* ── Phone portrait (320–480px) ── */
+@media (max-width: 480px) {
   .btn { padding: 10px 20px; font-size: 0.9rem; }
-  .pdice-card { min-width: 72px; padding: 6px 8px; }
-  .pdice-face { width: 38px; height: 38px; }
-  .pdice-inner { width: 28px; height: 28px; }
-  .pdice-inner .dot { width: 6px; height: 6px; }
+  .input { font-size: 0.9rem; padding: 10px 14px; max-width: 100%; }
+  .pdice-card { min-width: 68px; padding: 6px 6px; }
+  .pdice-face { width: 36px; height: 36px; }
+  .pdice-inner { width: 26px; height: 26px; }
+  .pdice-inner .dot { width: 5px; height: 5px; }
+  .pdice-name { font-size: 0.55rem; }
+  .pdice-pos { font-size: 0.55rem; }
+  .pface { padding: 5px 8px 4px; border-radius: 12px; }
+  .pface-emoji { font-size: 1.6rem; }
+  .pface-bubble { font-size: 0.55rem; top: -18px; right: -10px; }
+  .pface.is-ai::after { width: 18px; height: 18px; font-size: 0.7rem; top: -6px; right: -6px; }
+  .turn-indicator { font-size: 0.78rem; padding: 5px 12px; }
+  .turn-dot { width: 10px; height: 10px; }
+  .game-actions .btn-sm { font-size: 0.7rem; padding: 4px 10px; }
+  .log-entries { font-size: 0.7rem; }
+  .log-header { font-size: 0.75rem; }
+  .board-wrap { max-width: 100vw; border-radius: 10px; }
+  #toast-container { top: 8px; right: 8px; left: 8px; }
+  .toast { font-size: 0.78rem; padding: 8px 12px; white-space: normal; }
+  .room-code { font-size: 1.1rem; letter-spacing: 2px; }
+  .glass-card { border-radius: 16px; padding: 16px 12px; }
+}
+
+/* ── Small phone (<380px) ── */
+@media (max-width: 380px) {
+  .join-form { padding: 14px 10px; }
+  .btn { padding: 9px 14px; font-size: 0.82rem; }
+  .player-faces { gap: 6px; }
+  .pface { padding: 4px 6px 3px; }
+  .pface-emoji { font-size: 1.3rem; }
+  .pface-name { font-size: 0.5rem; max-width: 60px; }
+  .pdice-card { min-width: 58px; }
+  .color-swatch { width: 26px; height: 26px; }
+}
+
+/* ── Landscape orientation on mobile ── */
+@media (max-height: 500px) and (orientation: landscape) {
+  body { align-items: flex-start; }
+  .screen { padding: 8px; }
+  .logo-area { margin-bottom: 8px; }
+  .logo-icon { font-size: 1.8rem; }
+  .join-form { gap: 8px; }
+  .player-faces { margin-bottom: 4px; min-height: auto; }
+  .pface-emoji { font-size: 1.4rem; }
+  .pface { padding: 4px 8px 3px; }
+  .game-top-bar { gap: 4px; }
+  .player-dice-row { margin-top: 2px; }
+  .pdice-card { padding: 4px 6px; }
+  .pdice-face { width: 30px; height: 30px; }
+  .pdice-inner { width: 22px; height: 22px; }
+  .pdice-inner .dot { width: 4px; height: 4px; }
+  .move-log-panel { max-height: 80px; }
+  .board-wrap { max-width: min(95vw, 80vh); }
+  .turn-indicator { padding: 4px 12px; font-size: 0.75rem; min-height: 36px; }
 }

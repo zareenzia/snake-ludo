@@ -15,7 +15,10 @@
 
   <!-- ══════ SETTINGS NAVBAR ══════ -->
   <div class="settings-navbar" id="settings-navbar">
-    <button class="settings-nav-toggle" id="settings-nav-toggle">⚙️ Settings</button>
+    <div class="nav-btn-row">
+      <button class="settings-nav-toggle" id="help-toggle">❓ Help</button>
+      <button class="settings-nav-toggle" id="settings-nav-toggle">⚙️ Settings</button>
+    </div>
     <div class="settings-nav-panel" id="settings-nav-panel">
       <div class="settings-nav-group">
         <span class="settings-nav-label">Your Name</span>
@@ -160,6 +163,73 @@
 
   <!-- ══════ TOASTS ══════ -->
   <div id="toast-container"></div>
+
+  <!-- ══════ HELP / USER MANUAL MODAL ══════ -->
+  <div class="help-modal-overlay" id="help-modal" style="display:none">
+    <div class="help-modal glass-card">
+      <button class="help-close" id="help-close">✕</button>
+      <h2 class="help-title">📖 How to Play</h2>
+
+      <div class="help-section">
+        <h3>🎯 Getting Started</h3>
+        <ul>
+          <li><strong>Quick Play vs AI</strong> — Jump straight into a game against a bot. Pick your color &amp; avatar first!</li>
+          <li><strong>Create Room</strong> — Make a room and share the code with friends to play online.</li>
+          <li><strong>Join Room</strong> — Enter a friend's room code to join their game.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🎲 Game Rules</h3>
+        <ul>
+          <li>Players take turns rolling the dice. Click the <strong>Roll</strong> button when it's your turn.</li>
+          <li>Your token moves forward by the number you rolled.</li>
+          <li>🪜 <strong>Ladders</strong> — Land on a ladder base and climb UP to the top!</li>
+          <li>🐍 <strong>Snakes</strong> — Land on a snake head and slide DOWN to its tail!</li>
+          <li>Rolling a <strong>6</strong> gives you an extra turn (up to 3 in a row).</li>
+          <li>You must land <strong>exactly</strong> on square 100 to win. If your roll overshoots, you stay put.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>⚙️ Settings</h3>
+        <ul>
+          <li>Click <strong>⚙️ Settings</strong> (top-right) to change your name, color, and avatar anytime before the game starts.</li>
+          <li>Choose from 👦 Boy, 👧 Girl, or 🐱 Cat avatars — your face reacts during the game!</li>
+          <li>You can also rename the AI bot and pick its color.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>😊 Emoji Reactions</h3>
+        <ul>
+          <li>When you land on a <strong>snake</strong>, your avatar cries 😭 and opponents laugh 🤣</li>
+          <li>When you land on a <strong>ladder</strong>, your avatar celebrates 😎 and opponents get jealous 😰</li>
+          <li>Expressions stay until the next dice roll!</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🏆 Winning</h3>
+        <ul>
+          <li>First player to reach square <strong>100</strong> wins!</li>
+          <li>In multiplayer, the game continues to determine 2nd and 3rd place.</li>
+          <li>After the game, you can <strong>Play Again</strong> or <strong>Exit to Menu</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🛡️ Power-Ups (Coming Soon)</h3>
+        <ul>
+          <li><strong>Shield</strong> — Blocks the next snake bite.</li>
+          <li><strong>Double Jump</strong> — Doubles your next roll.</li>
+          <li><strong>Reroll</strong> — Roll the dice again if you don't like the result.</li>
+        </ul>
+      </div>
+
+      <button class="btn btn-primary help-got-it" id="help-got-it">👍 Got it!</button>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js" defer></script>
   <script src="/js/profile.js" defer></script>

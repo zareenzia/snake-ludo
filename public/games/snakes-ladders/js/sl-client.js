@@ -16,6 +16,7 @@
   var gameState = null;
   var myPlayerIdx = -1;
   var isRolling = false;
+  var isAnimatingMove = false;  // true while any token animation is playing
   var playerLastRoll = {};  // playerIdx → last dice value
 
   socket.on('connect', function () {
@@ -55,11 +56,10 @@
 
   /* ── Avatar / Emoji system ── */
   var AVATARS = [
-    { id: 'boy',  label: '😊 Boy',  neutral: '😊', cry: '😭', mock: '🤣', cool: '😎', scared: '😰', win: '🥳' },
-    { id: 'girl', label: '👧 Girl', neutral: '👧', cry: '😭', mock: '🤣', cool: '😎', scared: '😰', win: '🥳' },
-    { id: 'cat',  label: '🐱 Cat',  neutral: '🐱', cry: '😿', mock: '😹', cool: '😼', scared: '🙀', win: '😸' },
+    { id: 'smiley', label: '😊 Smiley', neutral: '😊', cry: '😭', mock: '🤣', cool: '😎', scared: '😰', win: '🥳' },
+    { id: 'cat',    label: '🐱 Cat',    neutral: '🐱', cry: '😿', mock: '😹', cool: '😼', scared: '🙀', win: '😸' },
   ];
-  var selectedAvatar = 'boy';
+  var selectedAvatar = 'smiley';
 
   function getAvatar(id) {
     for (var i = 0; i < AVATARS.length; i++) { if (AVATARS[i].id === id) return AVATARS[i]; }
@@ -141,6 +141,24 @@
         settingsPanel.classList.remove('open');
         settingsToggle.classList.remove('active');
       }
+    });
+  }
+
+  /* Help modal toggle */
+  var helpModal = document.getElementById('help-modal');
+  var helpToggle = document.getElementById('help-toggle');
+  if (helpToggle && helpModal) {
+    helpToggle.addEventListener('click', function () {
+      helpModal.style.display = helpModal.style.display === 'flex' ? 'none' : 'flex';
+    });
+    document.getElementById('help-close').addEventListener('click', function () {
+      helpModal.style.display = 'none';
+    });
+    document.getElementById('help-got-it').addEventListener('click', function () {
+      helpModal.style.display = 'none';
+    });
+    helpModal.addEventListener('click', function (e) {
+      if (e.target === helpModal) helpModal.style.display = 'none';
     });
   }
 
@@ -393,12 +411,14 @@
     container.innerHTML = '';
     for (var i = 0; i < gameState.players.length; i++) {
       var p = gameState.players[i];
-      var neutralEmoji = p.isAI ? FACE_AI_NEUTRAL : FACE_NEUTRAL;
+      var av = p.isAI ? null : getAvatar(p.avatar || 'smiley');
+      var neutralEmoji = p.isAI ? FACE_AI_NEUTRAL : (av ? av.neutral : FACE_NEUTRAL);
       var isCurrent = (i === gameState.currentPlayerIndex);
       var div = document.createElement('div');
       div.className = 'pface' + (p.isAI ? ' is-ai' : '') + (isCurrent ? ' is-current' : '');
       div.id = 'pface-' + i;
       div.setAttribute('data-is-ai', p.isAI ? '1' : '0');
+      div.setAttribute('data-avatar', p.avatar || (p.isAI ? 'robot' : 'smiley'));
       div.style.setProperty('--pface-color', p.color);
       div.style.setProperty('--pface-glow', p.color + '44');
       div.innerHTML =
@@ -440,53 +460,70 @@
   }
 
   /** Reset all player faces to neutral (called at start of each new roll) */
+  /** Helper: get the neutral emoji for a player by index */
+  function getNeutralEmoji(playerIdx) {
+    var pface = document.getElementById('pface-' + playerIdx);
+    if (!pface) return FACE_NEUTRAL;
+    var isAI = pface.getAttribute('data-is-ai') === '1';
+    if (isAI) return FACE_AI_NEUTRAL;
+    var avId = pface.getAttribute('data-avatar') || 'smiley';
+    var av = getAvatar(avId);
+    return av ? av.neutral : FACE_NEUTRAL;
+  }
+
   function resetAllFaces() {
     if (!gameState) return;
     for (var i = 0; i < gameState.players.length; i++) {
       var emojiEl = document.getElementById('pface-emoji-' + i);
       var bubbleEl = document.getElementById('pface-bubble-' + i);
       if (emojiEl) {
-        var pface = document.getElementById('pface-' + i);
-        var isAI = pface && pface.getAttribute('data-is-ai') === '1';
-        emojiEl.textContent = isAI ? FACE_AI_NEUTRAL : FACE_NEUTRAL;
+        emojiEl.textContent = getNeutralEmoji(i);
         emojiEl.classList.remove('anim-cry', 'anim-laugh', 'anim-mock', 'anim-bounce');
       }
       if (bubbleEl) bubbleEl.classList.remove('show');
     }
   }
 
+  /** Get the reaction emoji for a player based on their avatar */
+  function getReactionEmoji(playerIdx, reactionType) {
+    var pface = document.getElementById('pface-' + playerIdx);
+    if (!pface) return FACE_NEUTRAL;
+    var isAI = pface.getAttribute('data-is-ai') === '1';
+    if (isAI) return FACE_AI_NEUTRAL;
+    var avId = pface.getAttribute('data-avatar') || 'smiley';
+    var av = getAvatar(avId);
+    if (!av) return FACE_NEUTRAL;
+    return av[reactionType] || av.neutral;
+  }
+
   function triggerSnakeReaction(playerIdx) {
-    // The player who got bitten: cry
-    setFaceReaction(playerIdx, FACE_CRY, 'anim-cry', pickRandom(CRY_MESSAGES), 3000);
-    // All other players: mock/laugh
+    setFaceReaction(playerIdx, getReactionEmoji(playerIdx, 'cry'), 'anim-cry', pickRandom(CRY_MESSAGES));
     if (gameState) {
       for (var i = 0; i < gameState.players.length; i++) {
         if (i !== playerIdx) {
-          setFaceReaction(i, FACE_MOCK, 'anim-mock', pickRandom(TAUNT_MESSAGES), 3000);
+          setFaceReaction(i, getReactionEmoji(i, 'mock'), 'anim-mock', pickRandom(TAUNT_MESSAGES));
         }
       }
     }
   }
 
   function triggerLadderReaction(playerIdx) {
-    // The player who climbed: celebrate
-    setFaceReaction(playerIdx, FACE_COOL, 'anim-laugh', pickRandom(CELEBRATE_MESSAGES), 3000);
-    // Others: jealous/scared
+    setFaceReaction(playerIdx, getReactionEmoji(playerIdx, 'cool'), 'anim-laugh', pickRandom(CELEBRATE_MESSAGES));
     if (gameState) {
       for (var i = 0; i < gameState.players.length; i++) {
         if (i !== playerIdx) {
-          setFaceReaction(i, FACE_SCARED, 'anim-bounce', pickRandom(JEALOUS_MESSAGES), 3000);
+          setFaceReaction(i, getReactionEmoji(i, 'scared'), 'anim-bounce', pickRandom(JEALOUS_MESSAGES));
         }
       }
     }
   }
 
   function triggerWinReaction(playerIdx) {
-    setFaceReaction(playerIdx, FACE_WIN, 'anim-laugh', 'I WON! 🏆', 5000);
+    setFaceReaction(playerIdx, getReactionEmoji(playerIdx, 'win'), 'anim-laugh', 'I WON! 🏆');
     if (gameState) {
       for (var i = 0; i < gameState.players.length; i++) {
         if (i !== playerIdx) {
-          setFaceReaction(i, FACE_CRY, 'anim-cry', 'GG... 😢', 5000);
+          setFaceReaction(i, getReactionEmoji(i, 'cry'), 'anim-cry', 'GG... 😢');
         }
       }
     }
@@ -518,11 +555,21 @@
      GAME STATE UPDATES
      ══════════════════════════════════════ */
   socket.on('sl:game-state', function (state) {
+    // Save non-position data always, but guard board redraw during animations
+    var wasAnimating = isAnimatingMove || SLBoard.isAnimating();
+    if (wasAnimating && gameState) {
+      // Preserve the positions we're currently animating — update everything else
+      for (var i = 0; i < state.players.length; i++) {
+        state.players[i].position = gameState.players[i].position;
+      }
+    }
     gameState = state;
     if (currentRoom) {
       myPlayerIdx = currentRoom.players.findIndex(function (p) { return p.id === mySocketId; });
     }
-    SLBoard.draw(state);
+    if (!wasAnimating) {
+      SLBoard.draw(state);
+    }
     renderTurnIndicator(state);
     renderPlayerDice(state);
     updateFaceHighlight(state);
@@ -534,6 +581,7 @@
   socket.on('sl:roll-result', function (result) {
     // Reset all emoji faces from previous roll's reactions
     resetAllFaces();
+    isAnimatingMove = true;  // Block further rolls until animation chain finishes
     var pName = gameState ? gameState.players[result.playerIdx].colorName : 'Player';
     var pColor = gameState ? gameState.players[result.playerIdx].color : '#aaa';
 
@@ -579,9 +627,14 @@
           } else {
             triggerLadderReaction(result.playerIdx);
           }
-          return SLBoard.animateToken(result.playerIdx, sl.from, sl.to);
+          return SLBoard.animateSnakeLadder(result.playerIdx, sl.from, sl.to, sl.type);
         }
       }).then(function () {
+        isAnimatingMove = false;  // Unlock — animation chain complete
+        // Update local gameState with final position so draw doesn't snap back
+        if (gameState && gameState.players[result.playerIdx]) {
+          gameState.players[result.playerIdx].position = result.newPos;
+        }
         if (result.won) {
           addLog('🏆 ' + pName + ' reached 100!', pColor, 'win');
           showToast(pName + ' reached 100! 🏆', 'win');
@@ -691,7 +744,7 @@
     for (var j = 0; j < state.players.length; j++) {
       var btn = document.getElementById('pdice-btn-' + j);
       if (btn) {
-        btn.disabled = isRolling;
+        btn.disabled = isRolling || isAnimatingMove;
         btn.addEventListener('click', handleDiceClick);
       }
     }
@@ -705,7 +758,7 @@
   }
 
   function handleDiceClick() {
-    if (isRolling) return;
+    if (isRolling || isAnimatingMove) return;
     if (!gameState || gameState.currentPlayerIdx !== myPlayerIdx) return;
     isRolling = true;
     // Disable button immediately
@@ -765,11 +818,11 @@
     el.style.borderColor = p.color + '80';
     el.style.boxShadow = '0 0 20px ' + p.color + '30';
     var isMe = (state.currentPlayerIdx === myPlayerIdx);
-    var label = isMe ? 'Your' : p.colorName;
+    var label = isMe ? 'Your' : (p.colorName + "'s");
     el.innerHTML =
       '<span class="turn-dot" style="background:' + p.color + ';box-shadow:0 0 8px ' + p.color + '"></span>' +
       '<span style="color:' + p.color + '">' + label + '</span>' +
-      "<span>'s turn</span>";
+      "<span> turn</span>";
   }
 
   function showMsg(msg) {
