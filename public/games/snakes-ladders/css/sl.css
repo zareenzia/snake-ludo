@@ -75,6 +75,85 @@ h1 {
 }
 .btn-ai:hover { background: linear-gradient(135deg, #ffe066, #f5c542); transform: scale(1.04); }
 
+/* ── Color pick modal ── */
+.color-modal-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  display: flex; justify-content: center; align-items: center;
+  animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.color-modal {
+  padding: 28px 32px; border-radius: 20px; min-width: 280px; max-width: 360px;
+  text-align: center; animation: modalPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modalPop { from { opacity: 0; transform: scale(0.85) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.color-modal-title { margin: 0 0 18px; font-size: 1.2rem; color: #f5c542; }
+.color-modal-group { margin: 12px 0; }
+.color-modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+.color-modal-actions .btn { min-width: 110px; }
+
+/* ── Color settings navbar ── */
+/* ── Settings navbar ── */
+.settings-navbar {
+  position: fixed; top: 0; right: 0; z-index: 200;
+  display: flex; flex-direction: column; align-items: flex-end;
+}
+.settings-nav-toggle {
+  background: rgba(20,20,40,0.85); color: #f5c542;
+  border: 1px solid rgba(245,197,66,0.2); border-top: none; border-right: none;
+  padding: 8px 18px; border-radius: 0 0 0 14px;
+  font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
+}
+.settings-nav-toggle:hover { background: rgba(40,40,70,0.95); color: #ffe066; transform: scale(1.05); }
+.settings-nav-toggle.active { background: rgba(245,197,66,0.15); border-color: rgba(245,197,66,0.4); }
+.settings-nav-panel {
+  background: rgba(16,16,36,0.95); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0 0 0 16px; padding: 16px 20px;
+  backdrop-filter: blur(14px); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: none; min-width: 240px;
+}
+.settings-nav-panel.open { display: block; animation: navSlide 0.25s ease-out; }
+@keyframes navSlide { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.settings-nav-group { margin: 6px 0; }
+.settings-nav-label {
+  display: block; font-size: 0.72rem; font-weight: 700; color: #889;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+}
+.settings-nav-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 10px 0; }
+.settings-input {
+  width: 100%; padding: 7px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #eee; font-family: 'Nunito', sans-serif; font-size: 0.85rem; font-weight: 600;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box; margin-bottom: 4px;
+}
+.settings-input:focus { border-color: #f5c542; box-shadow: 0 0 8px rgba(245,197,66,0.2); }
+.color-modal-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 10px 0; }
+
+/* ── Emoji / Avatar picker ── */
+.emoji-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.emoji-option {
+  font-size: 1.6rem; width: 42px; height: 42px; display: flex;
+  align-items: center; justify-content: center;
+  border-radius: 12px; cursor: pointer;
+  background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08);
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.emoji-option:hover {
+  transform: scale(1.2) rotate(-8deg);
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.emoji-option.selected {
+  border-color: #f5c542; background: rgba(245,197,66,0.12);
+  box-shadow: 0 0 12px rgba(245,197,66,0.3);
+  transform: scale(1.1);
+}
+.emoji-option.selected:hover { transform: scale(1.2) rotate(-8deg); }
+
 /* ── Color picker swatches ── */
 .color-picker-section { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
 .color-label { color: #aab; font-size: 0.85rem; white-space: nowrap; font-weight: 600; }
@@ -380,12 +459,47 @@ h1 {
 
 /* ── Player emoji reaction faces ── */
 .player-faces {
-  display: flex; justify-content: center; gap: 24px;
-  margin-bottom: 10px; min-height: 70px;
+  display: flex; justify-content: center; gap: 28px;
+  margin-bottom: 10px; min-height: 90px;
 }
 .pface {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  position: relative; padding: 10px 16px 8px; border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.06);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  cursor: default;
+}
+.pface:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.pface:hover .pface-emoji { animation: face-hover-wiggle 0.6s ease-in-out; }
+.pface.is-ai { border-style: dashed; }
+.pface.is-ai::after {
+  content: '🤖'; position: absolute; top: -8px; right: -8px;
+  font-size: 0.9rem; background: rgba(16,16,36,0.9); border-radius: 50%;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.15);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+.pface.is-current {
+  border-color: var(--pface-color, #0ead69);
+  box-shadow: 0 0 16px var(--pface-glow, rgba(14,173,105,0.3));
+}
+@keyframes badge-pulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+@keyframes face-hover-wiggle {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+  100% { transform: rotate(0deg); }
 }
 .pface-emoji {
   font-size: 2.8rem; line-height: 1; transition: transform 0.3s;
@@ -393,6 +507,12 @@ h1 {
 }
 .pface-name {
   font-size: 0.7rem; font-weight: 700; color: #aab;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pface-badge {
+  font-size: 0.55rem; font-weight: 800; color: #889;
+  background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 6px;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .pface-bubble {

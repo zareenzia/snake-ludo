@@ -6,11 +6,40 @@
   <title>Snakes & Ladders — Game Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <link rel="stylesheet" href="css/sl.css" />
 </head>
 <body>
   <a href="/" class="back-link" id="back-link">← Menu</a>
+
+  <!-- ══════ SETTINGS NAVBAR ══════ -->
+  <div class="settings-navbar" id="settings-navbar">
+    <button class="settings-nav-toggle" id="settings-nav-toggle">⚙️ Settings</button>
+    <div class="settings-nav-panel" id="settings-nav-panel">
+      <div class="settings-nav-group">
+        <span class="settings-nav-label">Your Name</span>
+        <input type="text" id="settings-player-name" class="settings-input" placeholder="Player" maxlength="16" />
+      </div>
+      <div class="settings-nav-group">
+        <span class="settings-nav-label">Your Color</span>
+        <div class="color-swatches" id="join-color-picker"></div>
+      </div>
+      <div class="settings-nav-group">
+        <span class="settings-nav-label">Your Avatar</span>
+        <div class="emoji-picker" id="settings-player-emoji"></div>
+      </div>
+      <div class="settings-nav-divider"></div>
+      <div class="settings-nav-group">
+        <span class="settings-nav-label">Bot Name</span>
+        <input type="text" id="settings-bot-name" class="settings-input" placeholder="Bot Alpha" maxlength="16" />
+      </div>
+      <div class="settings-nav-group">
+        <span class="settings-nav-label">Bot Color</span>
+        <div class="color-swatches" id="join-ai-color-picker"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- ══════ JOIN / CREATE SCREEN ══════ -->
   <div id="screen-join" class="screen">
@@ -20,20 +49,12 @@
       <p class="subtitle">Real-time online multiplayer</p>
     </div>
     <div class="join-form glass-card">
-      <input type="text" id="input-name" class="input" placeholder="Your name" maxlength="16" />
-      <div class="color-picker-section">
-        <label class="color-label">Your color:</label>
-        <div class="color-swatches" id="join-color-picker"></div>
-      </div>
+      <input type="text" id="input-name" class="input" placeholder="Room name" maxlength="16" />
       <button id="btn-create" class="btn btn-primary">Create Room</button>
       <div class="divider"><span>or</span></div>
       <input type="text" id="input-code" class="input" placeholder="Room code" maxlength="6" style="text-transform:uppercase" />
       <button id="btn-join" class="btn btn-secondary">Join Room</button>
       <div class="divider"><span>or</span></div>
-      <div class="color-picker-section">
-        <label class="color-label">AI color:</label>
-        <div class="color-swatches" id="join-ai-color-picker"></div>
-      </div>
       <button id="btn-quick-ai" class="btn btn-ai">⚡ Quick Play vs AI</button>
     </div>
   </div>
@@ -105,13 +126,45 @@
     </div>
   </div>
 
+  <!-- ══════ SETTINGS MODAL (Quick Play) ══════ -->
+  <div class="color-modal-overlay" id="color-modal" style="display:none">
+    <div class="color-modal glass-card">
+      <h3 class="color-modal-title">⚙️ Game Settings</h3>
+      <div class="color-modal-group">
+        <span class="settings-nav-label">Your Name</span>
+        <input type="text" id="modal-player-name" class="settings-input" placeholder="Player" maxlength="16" />
+      </div>
+      <div class="color-modal-group">
+        <span class="settings-nav-label">Your Color</span>
+        <div class="color-swatches" id="modal-color-picker"></div>
+      </div>
+      <div class="color-modal-group">
+        <span class="settings-nav-label">Your Avatar</span>
+        <div class="emoji-picker" id="modal-player-emoji"></div>
+      </div>
+      <div class="color-modal-divider"></div>
+      <div class="color-modal-group">
+        <span class="settings-nav-label">Bot Name</span>
+        <input type="text" id="modal-bot-name" class="settings-input" placeholder="Bot Alpha" maxlength="16" />
+      </div>
+      <div class="color-modal-group">
+        <span class="settings-nav-label">Bot Color</span>
+        <div class="color-swatches" id="modal-ai-color-picker"></div>
+      </div>
+      <div class="color-modal-actions">
+        <button class="btn btn-ai" id="modal-start">⚡ Start Game</button>
+        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════ TOASTS ══════ -->
   <div id="toast-container"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/profile.js"></script>
-  <script src="/js/shop.js"></script>
-  <script src="js/sl-board.js"></script>
-  <script src="js/sl-client.js"></script>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="/js/profile.js" defer></script>
+  <script src="/js/shop.js" defer></script>
+  <script src="js/sl-board.js" defer></script>
+  <script src="js/sl-client.js" defer></script>
 </body>
 </html>

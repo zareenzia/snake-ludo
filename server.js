@@ -11,6 +11,8 @@ const path = require('path');
 const RoomManager = require('./server/room-manager');
 const { registerSocketHandlers } = require('./server/socket-handlers');
 
+const compression = require('compression');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -19,8 +21,15 @@ const io = new Server(server, {
   pingInterval: 10000,
 });
 
-// Serve all static files from /public
-app.use(express.static(path.join(__dirname, 'public')));
+// Gzip/Brotli compression for all responses
+app.use(compression());
+
+// Serve static files with aggressive caching (fonts, CSS, JS are fingerprint-safe)
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h',
+  etag: true,
+  lastModified: true,
+}));
 
 // Fallback: serve index.html for the root
 app.get('/', (req, res) => {

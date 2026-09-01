@@ -47,15 +47,53 @@
   var COLOR_PALETTE = [
     { hex: '#e94560', name: 'Red' },
     { hex: '#0ead69', name: 'Green' },
-    { hex: '#f5c542', name: 'Yellow' },
     { hex: '#4d9de0', name: 'Blue' },
-    { hex: '#9b59b6', name: 'Purple' },
-    { hex: '#e67e22', name: 'Orange' },
-    { hex: '#1abc9c', name: 'Teal' },
-    { hex: '#e84393', name: 'Pink' },
+    { hex: '#f5c542', name: 'Yellow' },
   ];
   var selectedColor = '#e94560';
   var selectedAIColor = '#4d9de0';
+
+  /* ── Avatar / Emoji system ── */
+  var AVATARS = [
+    { id: 'boy',  label: '😊 Boy',  neutral: '😊', cry: '😭', mock: '🤣', cool: '😎', scared: '😰', win: '🥳' },
+    { id: 'girl', label: '👧 Girl', neutral: '👧', cry: '😭', mock: '🤣', cool: '😎', scared: '😰', win: '🥳' },
+    { id: 'cat',  label: '🐱 Cat',  neutral: '🐱', cry: '😿', mock: '😹', cool: '😼', scared: '🙀', win: '😸' },
+  ];
+  var selectedAvatar = 'boy';
+
+  function getAvatar(id) {
+    for (var i = 0; i < AVATARS.length; i++) { if (AVATARS[i].id === id) return AVATARS[i]; }
+    return AVATARS[0];
+  }
+
+  function renderEmojiPicker(containerId, selected, onSelect) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    for (var i = 0; i < AVATARS.length; i++) {
+      var av = AVATARS[i];
+      var btn = document.createElement('div');
+      btn.className = 'emoji-option' + (av.id === selected ? ' selected' : '');
+      btn.textContent = av.neutral;
+      btn.title = av.label;
+      (function(avId) {
+        btn.addEventListener('click', function() { onSelect(avId); });
+      })(av.id);
+      container.appendChild(btn);
+    }
+  }
+
+  function refreshEmojiPickers() {
+    renderEmojiPicker('settings-player-emoji', selectedAvatar, function(id) {
+      selectedAvatar = id;
+      refreshEmojiPickers();
+    });
+    renderEmojiPicker('modal-player-emoji', selectedAvatar, function(id) {
+      selectedAvatar = id;
+      refreshEmojiPickers();
+    });
+  }
+  refreshEmojiPickers();
 
   function renderSwatches(containerId, selected, onSelect, excluded) {
     var container = document.getElementById(containerId);
@@ -90,28 +128,88 @@
   }
   refreshJoinSwatches();
 
+  /* Settings navbar toggle */
+  var settingsToggle = document.getElementById('settings-nav-toggle');
+  var settingsPanel = document.getElementById('settings-nav-panel');
+  if (settingsToggle && settingsPanel) {
+    settingsToggle.addEventListener('click', function () {
+      settingsPanel.classList.toggle('open');
+      settingsToggle.classList.toggle('active');
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.settings-navbar')) {
+        settingsPanel.classList.remove('open');
+        settingsToggle.classList.remove('active');
+      }
+    });
+  }
+
   document.getElementById('btn-create').addEventListener('click', function () {
-    var name = inputName.value.trim() || 'Host';
-    socket.emit('sl:create-room', { name: name, color: selectedColor }, function (res) {
+    var settingsName = document.getElementById('settings-player-name');
+    var name = (settingsName && settingsName.value.trim()) || inputName.value.trim() || 'Host';
+    socket.emit('sl:create-room', { name: name, color: selectedColor, avatar: selectedAvatar }, function (res) {
       if (res.ok) showScreen('lobby');
       else showToast(res.error || 'Failed to create room', 'snake');
     });
   });
 
   document.getElementById('btn-join').addEventListener('click', function () {
-    var name = inputName.value.trim() || 'Player';
+    var settingsName = document.getElementById('settings-player-name');
+    var name = (settingsName && settingsName.value.trim()) || inputName.value.trim() || 'Player';
     var code = inputCode.value.trim().toUpperCase();
     if (!code) { showToast('Enter a room code', 'info'); return; }
-    socket.emit('sl:join-room', { name: name, code: code, color: selectedColor }, function (res) {
+    socket.emit('sl:join-room', { name: name, code: code, color: selectedColor, avatar: selectedAvatar }, function (res) {
       if (res.ok) showScreen('lobby');
       else showToast(res.error || 'Could not join', 'snake');
     });
   });
 
   /* Quick Play vs AI — skip lobby, jump straight into a game */
+  /* ── Quick Play vs AI — show color modal first ── */
+  var colorModal = document.getElementById('color-modal');
+
+  function refreshModalSwatches() {
+    renderSwatches('modal-color-picker', selectedColor, function(hex) {
+      if (hex === selectedAIColor) return;
+      selectedColor = hex;
+      refreshModalSwatches();
+      refreshJoinSwatches();
+    }, [selectedAIColor]);
+    renderSwatches('modal-ai-color-picker', selectedAIColor, function(hex) {
+      if (hex === selectedColor) return;
+      selectedAIColor = hex;
+      refreshModalSwatches();
+      refreshJoinSwatches();
+    }, [selectedColor]);
+  }
+
   document.getElementById('btn-quick-ai').addEventListener('click', function () {
-    var name = inputName.value.trim() || 'Player';
-    socket.emit('sl:quick-ai', { name: name, color: selectedColor, aiColor: selectedAIColor }, function (res) {
+    /* Sync name fields from settings navbar to modal */
+    var settingsPlayerName = document.getElementById('settings-player-name');
+    var settingsBotName = document.getElementById('settings-bot-name');
+    var modalPlayerName = document.getElementById('modal-player-name');
+    var modalBotName = document.getElementById('modal-bot-name');
+    if (settingsPlayerName && modalPlayerName) modalPlayerName.value = settingsPlayerName.value;
+    if (settingsBotName && modalBotName) modalBotName.value = settingsBotName.value;
+    refreshModalSwatches();
+    colorModal.style.display = 'flex';
+  });
+
+  document.getElementById('modal-cancel').addEventListener('click', function () {
+    colorModal.style.display = 'none';
+  });
+
+  colorModal.addEventListener('click', function (e) {
+    if (e.target === colorModal) colorModal.style.display = 'none';
+  });
+
+  document.getElementById('modal-start').addEventListener('click', function () {
+    colorModal.style.display = 'none';
+    var modalPlayerName = document.getElementById('modal-player-name');
+    var modalBotName = document.getElementById('modal-bot-name');
+    var name = (modalPlayerName && modalPlayerName.value.trim()) || inputName.value.trim() || 'Player';
+    var botName = (modalBotName && modalBotName.value.trim()) || 'Bot Alpha';
+    socket.emit('sl:quick-ai', { name: name, color: selectedColor, aiColor: selectedAIColor, aiName: botName, avatar: selectedAvatar }, function (res) {
       if (res && res.ok) {
         showScreen('game');
       } else {
@@ -258,12 +356,16 @@
      PLAYER EMOJI REACTION FACES
      ══════════════════════════════════════ */
   var FACE_NEUTRAL = '😊';
+  var FACE_AI_NEUTRAL = '🤖';
   var FACE_CRY     = '😭';
   var FACE_LAUGH   = '😂';
   var FACE_MOCK    = '🤣';
   var FACE_SCARED  = '😰';
   var FACE_COOL    = '😎';
   var FACE_WIN     = '🥳';
+  var FACE_AI_CRY  = '🤖';
+  var FACE_AI_MOCK = '🤖';
+  var FACE_AI_WIN  = '🤖';
 
   var TAUNT_MESSAGES = [
     'Haha! Loser!', 'Get rekt! 😂', 'Byeee! 👋',
@@ -291,26 +393,42 @@
     container.innerHTML = '';
     for (var i = 0; i < gameState.players.length; i++) {
       var p = gameState.players[i];
+      var neutralEmoji = p.isAI ? FACE_AI_NEUTRAL : FACE_NEUTRAL;
+      var isCurrent = (i === gameState.currentPlayerIndex);
       var div = document.createElement('div');
-      div.className = 'pface';
+      div.className = 'pface' + (p.isAI ? ' is-ai' : '') + (isCurrent ? ' is-current' : '');
       div.id = 'pface-' + i;
+      div.setAttribute('data-is-ai', p.isAI ? '1' : '0');
+      div.style.setProperty('--pface-color', p.color);
+      div.style.setProperty('--pface-glow', p.color + '44');
       div.innerHTML =
-        '<div class="pface-emoji" id="pface-emoji-' + i + '">' + FACE_NEUTRAL + '</div>' +
-        '<div class="pface-name" style="color:' + p.color + '">' + (p.name || p.colorName) + (p.isAI ? ' 🤖' : '') + '</div>' +
+        '<div class="pface-emoji" id="pface-emoji-' + i + '">' + neutralEmoji + '</div>' +
+        '<div class="pface-name" style="color:' + p.color + '">' + (p.name || p.colorName) + '</div>' +
+        '<div class="pface-badge">' + (p.isAI ? '🤖 BOT' : '👤 PLAYER') + '</div>' +
         '<div class="pface-bubble" id="pface-bubble-' + i + '"></div>';
       container.appendChild(div);
     }
   }
 
-  function setFaceReaction(playerIdx, emoji, animClass, bubbleText, duration) {
-    duration = duration || 2500;
+  /* Update face card highlight for current player */
+  function updateFaceHighlight(state) {
+    if (!state || !state.players) return;
+    for (var i = 0; i < state.players.length; i++) {
+      var el = document.getElementById('pface-' + i);
+      if (el) {
+        if (i === state.currentPlayerIndex) el.classList.add('is-current');
+        else el.classList.remove('is-current');
+      }
+    }
+  }
+
+  function setFaceReaction(playerIdx, emoji, animClass, bubbleText) {
     var emojiEl = document.getElementById('pface-emoji-' + playerIdx);
     var bubbleEl = document.getElementById('pface-bubble-' + playerIdx);
     if (!emojiEl) return;
 
     emojiEl.textContent = emoji;
     emojiEl.classList.remove('anim-cry', 'anim-laugh', 'anim-mock', 'anim-bounce');
-    // Force reflow for re-triggering animation
     void emojiEl.offsetWidth;
     if (animClass) emojiEl.classList.add(animClass);
 
@@ -318,16 +436,23 @@
       bubbleEl.textContent = bubbleText;
       bubbleEl.classList.add('show');
     }
+    // No timeout — expression persists until next roll resets all faces
+  }
 
-    setTimeout(function () {
+  /** Reset all player faces to neutral (called at start of each new roll) */
+  function resetAllFaces() {
+    if (!gameState) return;
+    for (var i = 0; i < gameState.players.length; i++) {
+      var emojiEl = document.getElementById('pface-emoji-' + i);
+      var bubbleEl = document.getElementById('pface-bubble-' + i);
       if (emojiEl) {
-        emojiEl.textContent = FACE_NEUTRAL;
+        var pface = document.getElementById('pface-' + i);
+        var isAI = pface && pface.getAttribute('data-is-ai') === '1';
+        emojiEl.textContent = isAI ? FACE_AI_NEUTRAL : FACE_NEUTRAL;
         emojiEl.classList.remove('anim-cry', 'anim-laugh', 'anim-mock', 'anim-bounce');
       }
-      if (bubbleEl) {
-        bubbleEl.classList.remove('show');
-      }
-    }, duration);
+      if (bubbleEl) bubbleEl.classList.remove('show');
+    }
   }
 
   function triggerSnakeReaction(playerIdx) {
@@ -400,12 +525,15 @@
     SLBoard.draw(state);
     renderTurnIndicator(state);
     renderPlayerDice(state);
+    updateFaceHighlight(state);
   });
 
   /* ══════════════════════════════════════
      ROLL RESULT
      ══════════════════════════════════════ */
   socket.on('sl:roll-result', function (result) {
+    // Reset all emoji faces from previous roll's reactions
+    resetAllFaces();
     var pName = gameState ? gameState.players[result.playerIdx].colorName : 'Player';
     var pColor = gameState ? gameState.players[result.playerIdx].color : '#aaa';
 
@@ -430,9 +558,9 @@
 
       var movePromise;
       if (fromSq > 0 && toSq !== fromSq) {
-        movePromise = SLBoard.animateToken(result.playerIdx, fromSq, toSq, 350);
+        movePromise = SLBoard.animateToken(result.playerIdx, fromSq, toSq);
       } else if (fromSq <= 0 && toSq > 0) {
-        movePromise = SLBoard.animateToken(result.playerIdx, 1, toSq, 350);
+        movePromise = SLBoard.animateToken(result.playerIdx, 1, toSq);
       } else {
         movePromise = Promise.resolve();
       }
@@ -451,7 +579,7 @@
           } else {
             triggerLadderReaction(result.playerIdx);
           }
-          return SLBoard.animateToken(result.playerIdx, sl.from, sl.to, 400);
+          return SLBoard.animateToken(result.playerIdx, sl.from, sl.to);
         }
       }).then(function () {
         if (result.won) {
@@ -636,9 +764,11 @@
     var p = state.players[state.currentPlayerIdx];
     el.style.borderColor = p.color + '80';
     el.style.boxShadow = '0 0 20px ' + p.color + '30';
+    var isMe = (state.currentPlayerIdx === myPlayerIdx);
+    var label = isMe ? 'Your' : p.colorName;
     el.innerHTML =
       '<span class="turn-dot" style="background:' + p.color + ';box-shadow:0 0 8px ' + p.color + '"></span>' +
-      '<span style="color:' + p.color + '">' + p.colorName + '</span>' +
+      '<span style="color:' + p.color + '">' + label + '</span>' +
       "<span>'s turn</span>";
   }
 

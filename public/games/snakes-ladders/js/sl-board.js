@@ -265,26 +265,54 @@ var SLBoard = (function () {
     ctx.restore();
   }
 
-  /* ── Animation ── */
-  function animateToken(playerIdx, fromSq, toSq, duration) {
+  /* ── Animation (step-by-step with pause at each square) ── */
+  function animateToken(playerIdx, fromSq, toSq) {
     return new Promise(function (resolve) {
       if (fromSq <= 0) fromSq = 1;
       if (toSq <= 0) toSq = 1;
-      var anim = { playerIdx: playerIdx, fromSq: fromSq, toSq: toSq, progress: 0 };
-      _animations.push(anim);
-      var start = performance.now();
-      function tick(now) {
-        anim.progress = Math.min(1, (now - start) / duration);
-        draw(_gameState);
-        if (anim.progress < 1) {
-          requestAnimationFrame(tick);
-        } else {
-          _animations = _animations.filter(function (a) { return a !== anim; });
+      if (fromSq === toSq) { resolve(); return; }
+
+      var direction = toSq > fromSq ? 1 : -1;
+      var steps = Math.abs(toSq - fromSq);
+      var currentStep = 0;
+      var SLIDE_MS = 150;  // time to slide between squares
+      var PAUSE_MS = 250;  // pause at each square
+
+      function doStep() {
+        currentStep++;
+        var targetSq = fromSq + currentStep * direction;
+        var prevSq = targetSq - direction;
+
+        // Animate slide from prevSq to targetSq
+        var anim = { playerIdx: playerIdx, fromSq: prevSq, toSq: targetSq, progress: 0 };
+        _animations.push(anim);
+        var start = performance.now();
+
+        function tick(now) {
+          anim.progress = Math.min(1, (now - start) / SLIDE_MS);
           draw(_gameState);
-          resolve();
+          if (anim.progress < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            _animations = _animations.filter(function (a) { return a !== anim; });
+            // Temporarily set player position for drawing during pause
+            anim.progress = 1;
+            draw(_gameState);
+
+            if (currentStep < steps) {
+              // Pause at this square, then continue
+              setTimeout(doStep, PAUSE_MS);
+            } else {
+              // Done — final square
+              draw(_gameState);
+              resolve();
+            }
+          }
         }
+        requestAnimationFrame(tick);
       }
-      requestAnimationFrame(tick);
+
+      doStep();
     });
   }
 

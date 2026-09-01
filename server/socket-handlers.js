@@ -132,6 +132,7 @@ function registerSocketHandlers(io, socket, roomManager) {
     const name = (data && data.name) || 'Player';
     const playerColor = (data && data.color) || undefined;
     const aiColor = (data && data.aiColor) || undefined;
+    const aiName = (data && data.aiName) || undefined;
     // Create room
     const room = roomManager.createRoom(socket.id, name);
     if (!room) { if (ack) ack({ ok: false, error: 'Failed to create room.' }); return; }
@@ -139,8 +140,7 @@ function registerSocketHandlers(io, socket, roomManager) {
     currentRoomCode = room.code;
     socket.join(room.code);
     // Add AI opponent
-    roomManager.addAI(room.code, socket.id, aiColor);
-    // Set host ready
+    roomManager.addAI(room.code, socket.id, aiColor, aiName);
     roomManager.setReady(room.code, socket.id, true);
     // Start game immediately
     room.gameState = SLGameEngine.createGame(room.players, room.settings);

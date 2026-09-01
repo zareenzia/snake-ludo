@@ -45,16 +45,13 @@ class RoomManager {
   }
 
   /** Add a player to a room's player list */
-  _addPlayer(room, socketId, name, isAI, preferredColor) {
+  _addPlayer(room, socketId, name, isAI, preferredColor, avatar) {
     const ALL_COLORS = [
       { hex: '#e94560', name: 'Red' },
       { hex: '#0ead69', name: 'Green' },
       { hex: '#f5c542', name: 'Yellow' },
       { hex: '#4d9de0', name: 'Blue' },
-      { hex: '#9b59b6', name: 'Purple' },
-      { hex: '#e67e22', name: 'Orange' },
-      { hex: '#1abc9c', name: 'Teal' },
-      { hex: '#e84393', name: 'Pink' },
+      
     ];
     const takenHexes = room.players.map(p => p.color);
     let chosen = null;
@@ -73,6 +70,7 @@ class RoomManager {
       connected: true,
       position: 0,
       isAI: !!isAI,
+      avatar: isAI ? 'robot' : (avatar || 'boy'),
     });
   }
 
@@ -87,8 +85,6 @@ class RoomManager {
     const ALL_COLORS = [
       { hex: '#e94560', name: 'Red' }, { hex: '#0ead69', name: 'Green' },
       { hex: '#f5c542', name: 'Yellow' }, { hex: '#4d9de0', name: 'Blue' },
-      { hex: '#9b59b6', name: 'Purple' }, { hex: '#e67e22', name: 'Orange' },
-      { hex: '#1abc9c', name: 'Teal' }, { hex: '#e84393', name: 'Pink' },
     ];
     const match = ALL_COLORS.find(c => c.hex === newColor);
     if (!match) return null;
@@ -108,8 +104,6 @@ class RoomManager {
     const ALL_COLORS = [
       { hex: '#e94560', name: 'Red' }, { hex: '#0ead69', name: 'Green' },
       { hex: '#f5c542', name: 'Yellow' }, { hex: '#4d9de0', name: 'Blue' },
-      { hex: '#9b59b6', name: 'Purple' }, { hex: '#e67e22', name: 'Orange' },
-      { hex: '#1abc9c', name: 'Teal' }, { hex: '#e84393', name: 'Pink' },
     ];
     const match = ALL_COLORS.find(c => c.hex === newColor);
     if (!match) return null;
@@ -119,14 +113,15 @@ class RoomManager {
   }
 
   /** Add an AI player to the room (host only) */
-  addAI(code, hostId, aiColor) {
+  addAI(code, hostId, aiColor, aiName) {
     const room = this.rooms.get(code);
     if (!room || room.hostId !== hostId) return null;
     if (room.phase !== 'lobby') return null;
     if (room.players.length >= 4) return null;
     const aiId = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
     const aiNames = ['Bot Alpha', 'Bot Beta', 'Bot Gamma', 'Bot Delta'];
-    this._addPlayer(room, aiId, aiNames[room.players.length - 1] || 'Bot', true, aiColor);
+    const name = aiName || aiNames[room.players.length - 1] || 'Bot';
+    this._addPlayer(room, aiId, name, true, aiColor);
     return room;
   }
 
