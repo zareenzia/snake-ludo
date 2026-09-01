@@ -138,6 +138,20 @@ h1 {
 .color-modal-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 10px 0; }
 
 /* ── Emoji / Avatar picker ── */
+
+/* Confirm modal */
+.confirm-modal-overlay {
+  position: fixed; inset: 0; z-index: 800; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+}
+.confirm-modal {
+  min-width: 320px; max-width: 420px; padding: 18px; border-radius: 14px; text-align: center;
+}
+.confirm-title { font-weight: 900; font-size: 1.1rem; color: #f5c542; margin-bottom: 8px; }
+.confirm-message { color: #ccd; margin-bottom: 16px; font-weight: 700; }
+.confirm-actions { display: flex; gap: 12px; justify-content: center; }
+.confirm-actions .btn-danger { background: linear-gradient(135deg,#e94560,#c93b52); color:#fff; }
+
 .emoji-picker { display: flex; gap: 8px; flex-wrap: wrap; }
 .emoji-option {
   font-size: 1.6rem; width: 42px; height: 42px; display: flex;

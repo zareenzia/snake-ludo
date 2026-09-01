@@ -301,15 +301,27 @@ function registerSocketHandlers(io, socket, roomManager) {
     currentRoomCode = null;
   });
 
-  // ── Play again (host resets game in same room) ──
+  // ── Play again (host resets game in same room) — auto-start when host triggers ──
   socket.on('sl:play-again', () => {
     if (!currentRoomCode) return;
     const room = roomManager.getRoom(currentRoomCode);
     if (!room || room.hostId !== socket.id) return;
-    room.phase = 'lobby';
-    room.gameState = null;
-    room.players.forEach(p => { p.ready = false; p.position = 0; });
+
+    // Create new game state immediately and start playing (auto-start)
+    room.gameState = SLGameEngine.createGame(room.players, room.settings);
+    room.phase = 'playing';
+
+    // Reset per-player ready flags and positions (server authoritative)
+    room.players.forEach(p => { p.ready = false; /* positions tracked by gameState */ });
+
+    // Notify clients
     broadcastRoomUpdate(room);
+    io.to(room.code).emit('sl:game-started');
+    io.to(room.code).emit('sl:powerups', room.gameState.powerups);
+    broadcastGameState(room);
+
+    // If first player is AI, auto-roll
+    scheduleAIRoll(room);
   });
 
   // ── Disconnect ──

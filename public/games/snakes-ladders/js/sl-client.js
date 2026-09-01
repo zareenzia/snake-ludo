@@ -553,16 +553,49 @@
     } catch (e) { console.warn(e); }
   });
 
-  /* ── Exit / Restart buttons ── */
+  /* ── Exit / Restart buttons (use custom modal) ── */
+  function showConfirmModal(message, okLabel, onConfirm) {
+    var overlay = document.getElementById('confirm-modal');
+    var msg = document.getElementById('confirm-message');
+    var title = document.getElementById('confirm-title');
+    var btnOk = document.getElementById('confirm-ok');
+    var btnCancel = document.getElementById('confirm-cancel');
+    if (!overlay || !msg || !btnOk || !btnCancel) {
+      // fallback to native confirm
+      if (window.confirm(message)) onConfirm();
+      return;
+    }
+    title.textContent = 'Confirm';
+    msg.textContent = message;
+    btnOk.textContent = okLabel || 'Yes';
+    overlay.style.display = 'flex';
+
+    function cleanup() {
+      overlay.style.display = 'none';
+      btnOk.removeEventListener('click', onOk);
+      btnCancel.removeEventListener('click', onCancel);
+    }
+    function onOk() { cleanup(); if (typeof onConfirm === 'function') onConfirm(); }
+    function onCancel() { cleanup(); }
+    btnOk.addEventListener('click', onOk);
+    btnCancel.addEventListener('click', onCancel);
+  }
+
   document.getElementById('btn-exit-game').addEventListener('click', function () {
-    if (confirm('Leave this game?')) {
+    showConfirmModal('Leave this game?', 'Leave', function () {
       socket.emit('sl:leave-room'); currentRoom = null; gameState = null; showScreen('join');
-    }
+    });
   });
+
   document.getElementById('btn-restart-game').addEventListener('click', function () {
-    if (confirm('Restart game? (Host only)')) {
-      socket.emit('sl:play-again'); showScreen('lobby');
+    // Only host may restart — client-side guard for better feedback
+    if (!currentRoom || currentRoom.hostId !== mySocketId) {
+      showToast('Only the host can restart the game.', 'info');
+      return;
     }
+    showConfirmModal('Restart game? (Host only)', 'Restart', function () {
+      socket.emit('sl:play-again'); showScreen('lobby');
+    });
   });
 
   /* ══════════════════════════════════════
@@ -705,7 +738,14 @@
   });
 
   document.getElementById('btn-play-again').addEventListener('click', function () {
-    socket.emit('sl:play-again'); showScreen('lobby');
+    // Only host may trigger play-again
+    if (!currentRoom || currentRoom.hostId !== mySocketId) {
+      showToast('Only the host can play again.', 'info');
+      return;
+    }
+    showConfirmModal('Restart game and return to lobby?', 'Restart', function () {
+      socket.emit('sl:play-again'); showScreen('lobby');
+    });
   });
 
   /* ── DISCONNECT ── */
